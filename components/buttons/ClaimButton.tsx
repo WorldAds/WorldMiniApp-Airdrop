@@ -9,7 +9,7 @@ interface ClaimButtonProps {
 
 import { useState } from "react";
 import { MiniKit } from "@worldcoin/minikit-js";
-import { ERC20_ABI } from "../../app/api/erc20"; // or wherever you stored the ABI
+import MockUSDCABI from '@/app/abi/MockUSDC.json';
 
 export default function ClaimButton({
   imageNumber,
@@ -30,19 +30,16 @@ export default function ClaimButton({
       return;
     }
 
-    // For an 18-decimal token, '10 tokens' is "10000000000000000000"
-    const tenTokens = "10000000000000000000";
+    const amount = "1000000000000000000000";
 
     try {
       const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
         transaction: [
           {
-            // The ERC-20 contract that holds tokens
             address: "0x0C964958A0a6bA84706b2C0C6547BDD24cb572Ac",
-            abi: ERC20_ABI,
+            abi: MockUSDCABI.abi,
             functionName: "transfer",
-            // Pass string args to avoid overflow issues
-            args: ["0x0802FcEB8bD8376bE26121CAF15f4D683038ff42", tenTokens],
+            args: ["0xB25329c5D4E64792B47a5879b766513001E77315", amount],
           },
         ],
       });
