@@ -63,7 +63,7 @@ export default function DataCenterScreen() {
 
           <div className="absolute top-[50px] -translate-x-1/2 left-1/2">
             Wallet Address:{" "}
-            <span className="font-semibold truncate">{walletAddress}</span>
+            <span className="font-semibold truncate h-[100px]">{walletAddress}</span>
           </div>
         </div>
 

@@ -39,7 +39,7 @@ export default function DataTab() {
   }, []); // Run once on mount
 
   return (
-    <div className="grid grid-cols-2 gap-3 pb-24 overflow-y-auto max-h-[calc(100vh-380px)] px-1">
+    <div className="grid grid-cols-2 gap-3 pb-24 overflow-y-auto max-h-[calc(89vh-380px)] px-1 hide-scrollbar">
       {ads.map((ad) => (
         <div
           key={ad.id}

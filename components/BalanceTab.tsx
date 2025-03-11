@@ -58,7 +58,7 @@ export default function BalanceTab() {
         <div
           key={token.symbol}
           className="bg-gradient-to-r from-[#AC54F1]/10 to-[#EB489A]/10 
-                     rounded-lg p-4 backdrop-blur-sm border border-white/10"
+                     rounded-lg p-3 backdrop-blur-sm border border-white/10"
         >
           <div className="flex items-center gap-4">
             <img
@@ -67,17 +67,23 @@ export default function BalanceTab() {
               className="w-10 h-10 rounded-full"
             />
             <div className="flex-1">
-              <h3 className="text-lg font-semibold">{token.symbol}</h3>
-              <div className="flex justify-between mt-2">
+              <div className="flex justify-between mt-1">
                 <span className="text-gray-300">
-                  Price: ${token.price.toFixed(2)}
+                  <h3 className="text-lg font-semibold">{token.symbol}</h3>
                 </span>
                 <span className="text-gray-300">
                   Balance: {token.balance} {token.symbol}
                 </span>
               </div>
-              <div className="mt-2 text-right text-lg font-semibold bg-gradient-to-r from-[#AC54F1] to-[#EB489A] bg-clip-text text-transparent">
-                ${(token.balance * token.price).toFixed(2)}
+              <div className="flex justify-between mt-2">
+                <span className="text-gray-300">
+                  Price: ${token.price.toFixed(2)}
+                </span>
+                <span className="text-gray-300">
+                  <div className="mt-2 text-right text-lg font-semibold bg-gradient-to-r from-[#AC54F1] to-[#EB489A] bg-clip-text text-transparent">
+                    ${(token.balance * token.price).toFixed(2)}
+                  </div>
+                </span>
               </div>
             </div>
           </div>
