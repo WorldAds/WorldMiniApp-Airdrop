@@ -11,7 +11,7 @@ export default function LazyVideo({ videoId, onVideoEnd }: LazyVideoProps) {
   return (
     <video
       src={`/videos/${videoId}.mp4`}
-      className="w-auto h-auto max-w-full max-h-full rounded-lg"
+      className="w-[75%] h-auto max-w-full max-h-full rounded-lg"
       controls
       autoPlay
       muted

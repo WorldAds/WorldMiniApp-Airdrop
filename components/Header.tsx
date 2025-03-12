@@ -5,9 +5,9 @@ import { Button } from './ui/button';
 
 export default function Header() {
   return (
-    <header className="fixed top-0 left-0 right-0 p-4 z-50">
+    <header className="fixed top-0 left-0 right-0 p-6 z-50">
       <div className="max-w-7xl mx-auto flex justify-center items-center text-center">        
-        <h1 className="text-lg md:text-xl font-semibold text-white">
+        <h1 className="text-3xl md:text-xl font-semibold text-white">
           Ads Watching
         </h1>
       </div>

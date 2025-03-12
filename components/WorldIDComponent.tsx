@@ -14,7 +14,7 @@ export default function WorldIDComponent() {
   }, [session]);
 
   return (
-    <div className="mt-4 text-center">
+    <div className="mt-2 text-center">
       <h3 className="text-xl font-semibold bg-gradient-to-r from-[#AC54F1] to-[#EB489A] bg-clip-text text-transparent">
         World ID: {worldID ? worldID : "Not Authenticated"}
       </h3>

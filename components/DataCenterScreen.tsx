@@ -40,12 +40,12 @@ export default function DataCenterScreen() {
       </header>
 
       {/* Main Content */}
-      <main className="flex flex-col items-center px-4 pt-8">
+      <main className="flex flex-col items-center px-4 pt-6">
         <UserAvatar />
         <WorldIDComponent />
 
         {/* Tabs */}
-        <div className="flex gap-4 mt-8 mb-12 relative">
+        <div className="flex gap-4 mt-6 mb-12 relative">
           {["Data", "Balance", "Profile"].map((tab) => (
             <button
               key={tab}
@@ -68,7 +68,7 @@ export default function DataCenterScreen() {
         </div>
 
         {/* Tab Content */}
-        <div className="w-full">
+        <div className="flex w-full justify-center items-center">
           {activeTab === "data" && <DataTab />}
           {activeTab === "balance" && <BalanceTab />}
           {activeTab === "profile" && <ProfileTab />}

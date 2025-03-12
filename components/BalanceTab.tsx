@@ -53,12 +53,12 @@ export default function BalanceTab() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 flex-row justify-center items-center w-[95%]">
       {tokens.map((token) => (
         <div
           key={token.symbol}
-          className="bg-gradient-to-r from-[#AC54F1]/10 to-[#EB489A]/10 
-                     rounded-lg p-3 backdrop-blur-sm border border-white/10"
+          className="bg-gradient-to-r from-[#AC54F1]/10 to-[#EB489A]/10
+                     rounded-lg p-3 backdrop-blur-sm border border-white/10 h-[97px]"
         >
           <div className="flex items-center gap-4">
             <img

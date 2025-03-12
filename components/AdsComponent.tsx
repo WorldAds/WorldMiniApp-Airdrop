@@ -156,7 +156,7 @@ export default function AdsComponent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#2A203B] overflow-y-hidden">
+    <div className="max-h-screen min-h-screen bg-[#2A203B] overflow-y-hidden">
       <Header />
       <main className="flex flex-col items-center justify-center py-10">
         <Swiper
@@ -170,7 +170,7 @@ export default function AdsComponent() {
               key={ad.id}
               className="flex items-center justify-center"
             >
-              <div className="relative w-full max-w-4xl h-screen flex items-center justify-center">
+              <div className="relative w-full max-w-5xl h-screen flex items-center justify-center">
                 <Suspense fallback={<div>Loading ad...</div>}>
                   {ad.isVideo ? (
                     <LazyVideo
@@ -183,12 +183,12 @@ export default function AdsComponent() {
                 </Suspense>
 
                 {/* Welcome Message */}
-                <div className="absolute bottom-[33%] left-4">
+                <div className="w-full items-center absolute bottom-[68%] ">
                   <WelcomeMessage />
                 </div>
 
                 {/* Action Buttons */}
-                <div className="absolute bottom-[33%] right-4 flex flex-col space-y-2">
+                <div className="absolute bottom-[38%] right-3 flex flex-col space-y-2">
                   <ClaimButton
                     disabled={ad.isVideo && !completedVideos[ad.id]}
                     imageNumber={ad.id}
