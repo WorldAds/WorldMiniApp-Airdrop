@@ -1,13 +1,21 @@
-"use client";
+// UserAvatar.js
+import Image from 'next/image';
 
-export default function UserAvatar() {
+const UserAvatar = () => {
   return (
-    <div className="w-16 h-16 rounded-full bg-gradient-to-r from-[#AC54F1] to-[#EB489A] p-1">
-      <div className="w-full h-full rounded-full bg-[#1E1B2E] flex items-center justify-center">
-        <span className="text-3xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-[#AC54F1] to-[#EB489A]">
-          W
-        </span>
+    <div className='w-full h-full'>
+      <div className='w-full h-full'>
+      <Image 
+          className="rounded-full"
+          src="/icons/UserAvatar.png"
+          alt="AdAvatar"
+          width={100}
+          height={100}
+          layout="intrinsic" 
+        />
       </div>
     </div>
   );
-}
+};
+
+export default UserAvatar;

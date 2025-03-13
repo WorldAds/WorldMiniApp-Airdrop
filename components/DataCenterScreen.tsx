@@ -41,7 +41,9 @@ export default function DataCenterScreen() {
 
       {/* Main Content */}
       <main className="flex flex-col items-center px-4 pt-6">
-        <UserAvatar />
+        <div className="w-20">
+          <UserAvatar />
+        </div>
         <WorldIDComponent />
 
         {/* Tabs */}

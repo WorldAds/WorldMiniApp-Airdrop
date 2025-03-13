@@ -110,9 +110,11 @@
 
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import WelcomeMessage from "./WelcomeMessage";
+import AdAvatar from "./AdAvatar";
 import ClaimButton from "./buttons/ClaimButton";
 import FavouriteButton from "./buttons/FavouriteButton";
 import ReturnButton from "./buttons/ReturnButton";
+import UserAvatar from "./UserAvatar";
 import Footer from "./Footer";
 import Header from "./Header";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -188,13 +190,17 @@ export default function AdsComponent() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="absolute bottom-[38%] right-3 flex flex-col space-y-2">
+                <div className="absolute bottom-[30%] right-3 flex flex-col space-y-2">
+                  <AdAvatar />
                   <ClaimButton
                     disabled={ad.isVideo && !completedVideos[ad.id]}
                     imageNumber={ad.id}
                   />
                   <FavouriteButton />
                   <ReturnButton onReturn={() => {}} />
+                  <div className="w-12">
+                    <UserAvatar />
+                  </div>
                 </div>
               </div>
             </SwiperSlide>
