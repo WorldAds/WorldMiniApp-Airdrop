@@ -117,6 +117,7 @@ import Footer from "./Footer";
 import Header from "./Header";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
+import { getAdsList } from "@/app/api/service";
 
 const NUM_IMAGES = 20;
 const VIDEO_ADS = [1, 2, 5, 7, 9, 4, 11, 12, 13, 14, 15, 16, 17, 18];
@@ -126,26 +127,38 @@ const LazyImage = lazy(() => import("./LazyImage")); // For images
 const LazyVideo = lazy(() => import("./LazyVideo")); // For videos
 
 interface Ad {
-  id: number;
-  isVideo: boolean;
+  adsName: string;
+  budget: number;
+  startDate: string;
+  endDate: string;
+  targetAudience: string;
+  locations: string[];
+  creativeType: string;
+  creativeURL: string;
 }
 
 export default function AdsComponent() {
   const [ads, setAds] = useState<Ad[]>([]);
+
+  useEffect(() => {
+    const fetchAds = async () => {
+      try {
+        const adsData = await getAdsList();
+        console.log(adsData);
+        setAds(adsData);
+      } catch (error) {
+        console.error('Failed to load ads:', error);
+      }
+    };
+
+    fetchAds();
+  }, []);
 
   // A record of which videos are watched completely:
   // e.g. { 1: true, 3: false, 4: true, ... }
   const [completedVideos, setCompletedVideos] = useState<
     Record<number, boolean>
   >({});
-
-  useEffect(() => {
-    const allAds = Array.from({ length: NUM_IMAGES }, (_, i) => ({
-      id: i + 1,
-      isVideo: VIDEO_ADS.includes(i + 1),
-    }));
-    setAds(allAds);
-  }, []);
 
   // Helper to mark a specific ad's video as completed
   const handleVideoEnd = (adId: number) => {
@@ -165,39 +178,42 @@ export default function AdsComponent() {
           slidesPerView={1}
           className="w-full h-screen"
         >
-          {ads.map((ad) => (
-            <SwiperSlide
-              key={ad.id}
-              className="flex items-center justify-center"
-            >
-              <div className="relative w-full max-w-4xl h-screen flex items-center justify-center">
-                <Suspense fallback={<div>Loading ad...</div>}>
-                  {ad.isVideo ? (
-                    <LazyVideo
-                      onVideoEnd={() => handleVideoEnd(ad.id)}
-                      videoId={ad.id}
-                    />
-                  ) : (
-                    <LazyImage imageId={ad.id} />
-                  )}
-                </Suspense>
+          {ads.map((ad, index) => (
+            <div key={index}>
+              {ad.adsName}
+            </div>
+            // <SwiperSlide
+            //   key={ad.id}
+            //   className="flex items-center justify-center"
+            // >
+            //   <div className="relative w-full max-w-4xl h-screen flex items-center justify-center">
+            //     <Suspense fallback={<div>Loading ad...</div>}>
+            //       {ad.isVideo ? (
+            //         <LazyVideo
+            //           onVideoEnd={() => handleVideoEnd(ad.id)}
+            //           videoId={ad.id}
+            //         />
+            //       ) : (
+            //         <LazyImage imageId={ad.id} />
+            //       )}
+            //     </Suspense>
 
-                {/* Welcome Message */}
-                <div className="absolute bottom-[33%] left-4">
-                  <WelcomeMessage />
-                </div>
+            //     {/* Welcome Message */}
+            //     <div className="absolute bottom-[33%] left-4">
+            //       <WelcomeMessage />
+            //     </div>
 
-                {/* Action Buttons */}
-                <div className="absolute bottom-[33%] right-4 flex flex-col space-y-2">
-                  <ClaimButton
-                    disabled={ad.isVideo && !completedVideos[ad.id]}
-                    imageNumber={ad.id}
-                  />
-                  <FavouriteButton />
-                  <ReturnButton onReturn={() => {}} />
-                </div>
-              </div>
-            </SwiperSlide>
+            //     {/* Action Buttons */}
+            //     <div className="absolute bottom-[33%] right-4 flex flex-col space-y-2">
+            //       <ClaimButton
+            //         disabled={ad.isVideo && !completedVideos[ad.id]}
+            //         imageNumber={ad.id}
+            //       />
+            //       <FavouriteButton />
+            //       <ReturnButton onReturn={() => {}} />
+            //     </div>
+            //   </div>
+            // </SwiperSlide>
           ))}
         </Swiper>
       </main>

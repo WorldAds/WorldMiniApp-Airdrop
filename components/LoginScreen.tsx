@@ -1,20 +1,16 @@
 "use client";
 
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 export default function LoginScreen() {
   const router = useRouter();
 
   const handleLogin = async () => {
-    try {
-      const result = await signIn("worldcoin", {
-        redirect: true,
-        callbackUrl: "/wallet-auth",
-      });
-    } catch (error) {
-      console.error("Login failed", error);
-    }
+    // const result = await signIn("worldcoin", {
+    //   redirect: true,
+    //   callbackUrl: "/wallet-auth",
+    // });
+    router.push('/wallet-auth');
   };
 
   return (
