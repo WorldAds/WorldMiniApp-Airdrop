@@ -13,8 +13,13 @@ export default function HTMLContent({ htmlUrl, onLoad, fallbackContent }: HTMLCo
   const [error, setError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Handle iframe loading
+  // Handle iframe loading - only run on client side
   useEffect(() => {
+    // Only run browser-specific code on the client side
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
     const handleIframeLoad = () => {
       setLoading(false);
       if (onLoad) {

@@ -291,31 +291,70 @@ export default function AdsComponent() {
           spaceBetween={0}
           slidesPerView={1}
           mousewheel={{
-            sensitivity: 1,
-            thresholdDelta: 50
+            sensitivity: 3, // Increased sensitivity (was 1)
+            thresholdDelta: 20 // Lower threshold (was 50)
           }}
           keyboard={{
             enabled: true,
           }}
-          threshold={20} // Lower threshold for swipe detection
+          threshold={10} // Even lower threshold for swipe detection (was 20)
           resistance={false} // No resistance at the edges
           touchReleaseOnEdges={true} // Release touch events on edges
           longSwipes={true} // Enable long swipes
-          longSwipesRatio={0.1} // Swipe ratio for long swipes (lower = more sensitive)
+          longSwipesRatio={0.05} // Lower ratio for long swipes (was 0.1) - more sensitive
+          shortSwipes={true} // Enable short swipes
           followFinger={true} // Follow finger movement
-          speed={300} // Transition speed in ms
+          speed={250} // Slightly faster transition speed (was 300)
           simulateTouch={true} // Simulate touch events on desktop
+          touchStartPreventDefault={false} // Don't prevent default touch action
+          touchMoveStopPropagation={true} // Stop propagation of touchmove events
+          grabCursor={true} // Show grab cursor
           className="w-full h-[calc(100vh-8rem)]"
           onSwiper={(swiper) => {
             swiperRef.current = swiper;
           }}
           onSlideChange={(swiper: SwiperType) => {
+            // Get previous and current indices
+            const prevIndex = activeIndex;
+            const currentIndex = swiper.activeIndex;
+            
             // Update active index
-            setActiveIndex(swiper.activeIndex);
+            setActiveIndex(currentIndex);
+            
+            // Determine swipe direction
+            const direction = currentIndex > prevIndex ? 'down' : 'up';
             
             // Get the current ad
-            const currentAd = ads[swiper.activeIndex];
+            const currentAd = ads[currentIndex];
             if (!currentAd) return;
+            
+            // Get the previous ad (the one we're leaving)
+            const prevAd = ads[prevIndex];
+            
+            // Log the navigation for debugging
+            console.log(`Navigating ${direction} from ad ${prevIndex} to ad ${currentIndex}`);
+            
+            // Only run browser-specific code on the client side
+            if (typeof window !== 'undefined') {
+              // Pause all videos to ensure clean state
+              document.querySelectorAll('video').forEach(video => {
+                video.pause();
+              });
+              
+              // Pause all YouTube players
+              if (window.YT && typeof window.YT.get === 'function') {
+                document.querySelectorAll('iframe[src*="youtube.com"]').forEach(iframe => {
+                  try {
+                    const player = window.YT?.get(iframe.id);
+                    if (player && typeof player.pauseVideo === 'function') {
+                      player.pauseVideo();
+                    }
+                  } catch (e) {
+                    console.warn("Error pausing YouTube player:", e);
+                  }
+                });
+              }
+            }
             
             // Auto-play videos when they become visible
             if (currentAd.creativeType.toLowerCase() === 'video' || 

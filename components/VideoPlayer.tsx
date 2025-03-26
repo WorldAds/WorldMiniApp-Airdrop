@@ -26,11 +26,32 @@ export default function VideoPlayer({ videoSrc, onVideoEnd }: VideoPlayerProps) 
     }
   }, [videoSrc]);
 
+  // Handle touch events for regular videos
+  useEffect(() => {
+    // Only run on client side and for non-YouTube videos
+    if (typeof window !== 'undefined' && !isYouTube && videoRef.current) {
+      const handleTouchStart = (e: TouchEvent) => {
+        if (!videoRef.current) return;
+        // Pause video immediately on touch start to ensure quick response
+        videoRef.current.pause();
+        setIsPlaying(false);
+      };
+      
+      // Add the touch event listeners to the document
+      document.addEventListener('touchstart', handleTouchStart, { passive: true });
+      
+      // Clean up
+      return () => {
+        document.removeEventListener('touchstart', handleTouchStart);
+      };
+    }
+  }, [isYouTube]);
+  
   // Handle video visibility changes
   useEffect(() => {
     // Create an IntersectionObserver to detect when the video is visible
     if (!isYouTube && videoRef.current) {
-      // Initially pause the video to prevent auto-play when entering from another page
+      // Immediately pause the video to prevent auto-play when entering from another page
       if (videoRef.current) {
         videoRef.current.pause();
         setIsPlaying(false);
@@ -41,7 +62,16 @@ export default function VideoPlayer({ videoSrc, onVideoEnd }: VideoPlayerProps) 
           entries.forEach((entry) => {
             if (entry.isIntersecting) {
               // Video is visible, start playing
-              console.log("Video is visible, starting playback");
+              console.log("Video is visible, starting playback:", videoSrc);
+              
+              // Pause all other videos first to ensure only one plays at a time
+              document.querySelectorAll('video').forEach(video => {
+                if (video !== videoRef.current) {
+                  video.pause();
+                }
+              });
+              
+              // Now play this video
               const playPromise = videoRef.current?.play();
               
               if (playPromise !== undefined) {
@@ -55,14 +85,17 @@ export default function VideoPlayer({ videoSrc, onVideoEnd }: VideoPlayerProps) 
                   });
               }
             } else {
-              // Video is not visible, pause it
-              console.log("Video is not visible, pausing playback");
+              // Video is not visible, pause it immediately
+              console.log("Video is not visible, pausing playback:", videoSrc);
               videoRef.current?.pause();
               setIsPlaying(false);
             }
           });
         },
-        { threshold: 0.5 } // Trigger when at least 50% of the video is visible
+        { 
+          threshold: 0.7, // Higher threshold - only play when more of the video is visible
+          rootMargin: "-10% 0px" // Slightly reduce the effective viewport
+        }
       );
       
       // Start observing the video element
@@ -70,13 +103,14 @@ export default function VideoPlayer({ videoSrc, onVideoEnd }: VideoPlayerProps) 
       
       // Clean up the observer when component unmounts
       return () => {
+        // Pause video and disconnect observer
         if (videoRef.current) {
           videoRef.current.pause();
           observer.disconnect();
         }
       };
     }
-  }, [isYouTube]);
+  }, [isYouTube, videoSrc]);
 
   const handleVideoEnded = () => {
     if (onVideoEnd) {
@@ -103,20 +137,54 @@ export default function VideoPlayer({ videoSrc, onVideoEnd }: VideoPlayerProps) 
 
   useEffect(() => {
     if (isYouTube && youtubePlayerRef.current) {
+      // Add touch event listeners to detect swipe gestures for YouTube videos
+      const handleTouchStart = (e: TouchEvent) => {
+        // Pause YouTube video immediately on touch start to ensure quick response
+        if (ytPlayerInstanceRef.current && typeof ytPlayerInstanceRef.current.pauseVideo === 'function') {
+          ytPlayerInstanceRef.current.pauseVideo();
+          setIsPlaying(false);
+          console.log("Touch detected, pausing YouTube video immediately:", videoSrc);
+        }
+      };
+      
+      // Add the touch event listeners to the document
+      document.addEventListener('touchstart', handleTouchStart, { passive: true });
+      
       // Create an IntersectionObserver to detect when the YouTube player is visible
       const observer = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
             if (entry.isIntersecting) {
               // YouTube player is visible, play it
-              console.log("YouTube video is visible, starting playback");
+              console.log("YouTube video is visible, starting playback:", videoSrc);
+              
+              // Pause all other YouTube players
+              if (window.YT && typeof window.YT.get === 'function') {
+                // Find all YouTube iframes
+                document.querySelectorAll('iframe[src*="youtube.com"]').forEach(iframe => {
+                  const iframeId = iframe.id;
+                  // Skip the current player
+                  if (iframeId !== `youtube-player-${youtubeId}`) {
+                    try {
+                      const player = window.YT?.get(iframeId);
+                      if (player && typeof player.pauseVideo === 'function') {
+                        player.pauseVideo();
+                      }
+                    } catch (e) {
+                      console.warn("Error pausing other YouTube player:", e);
+                    }
+                  }
+                });
+              }
+              
+              // Play this YouTube video
               if (ytPlayerInstanceRef.current && typeof ytPlayerInstanceRef.current.playVideo === 'function') {
                 ytPlayerInstanceRef.current.playVideo();
                 setIsPlaying(true);
               }
             } else {
-              // YouTube player is not visible, pause it
-              console.log("YouTube video is not visible, pausing playback");
+              // YouTube player is not visible, pause it immediately
+              console.log("YouTube video is not visible, pausing playback:", videoSrc);
               if (ytPlayerInstanceRef.current && typeof ytPlayerInstanceRef.current.pauseVideo === 'function') {
                 ytPlayerInstanceRef.current.pauseVideo();
                 setIsPlaying(false);
@@ -124,18 +192,28 @@ export default function VideoPlayer({ videoSrc, onVideoEnd }: VideoPlayerProps) 
             }
           });
         },
-        { threshold: 0.5 } // Trigger when at least 50% of the player is visible
+        { 
+          threshold: 0.7, // Higher threshold - only play when more of the video is visible
+          rootMargin: "-10% 0px" // Slightly reduce the effective viewport
+        }
       );
       
       // Start observing the YouTube player element
       observer.observe(youtubePlayerRef.current);
       
-      // Clean up the observer when component unmounts
+      // Clean up the observer and event listeners when component unmounts
       return () => {
+        // Remove touch event listener
+        document.removeEventListener('touchstart', handleTouchStart);
+        
+        // Pause YouTube video and disconnect observer
+        if (ytPlayerInstanceRef.current && typeof ytPlayerInstanceRef.current.pauseVideo === 'function') {
+          ytPlayerInstanceRef.current.pauseVideo();
+        }
         observer.disconnect();
       };
     }
-  }, [isYouTube, youtubePlayerRef.current]);
+  }, [isYouTube, videoSrc, youtubeId]);
 
   if (isYouTube) {
     return (

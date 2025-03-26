@@ -40,6 +40,9 @@ interface YT {
       }
     ): YTPlayer;
   };
+  
+  // Get a player instance by element ID
+  get(elementId: string): YTPlayer | undefined;
 }
 
 interface YTPlayer {
