@@ -309,7 +309,7 @@ export default function AdsComponent() {
           touchStartPreventDefault={false} // Don't prevent default touch action
           touchMoveStopPropagation={true} // Stop propagation of touchmove events
           grabCursor={true} // Show grab cursor
-          className="w-full h-[calc(100vh-8rem)]"
+          className="w-full h-[calc(100vh-3rem)]"
           onSwiper={(swiper) => {
             swiperRef.current = swiper;
           }}
@@ -378,38 +378,27 @@ export default function AdsComponent() {
                     {renderAdContent(ad)}
                   </Suspense>
                   
-                  {/* Swipe Overlay - Transparent layer to capture swipes but allow clicks to pass through */}
-                  {/* Only add swipe overlay for videos, not for HTML content as per user request */}
-                  {ad.creativeType.toLowerCase() === 'video' && (
+                  {/* Swipe Overlay for all content types to ensure consistent swipe behavior */}
+                  <div 
+                    className="absolute inset-0 z-10"
+                    style={{ 
+                      pointerEvents: ad.creativeType.toLowerCase() === 'video' ? 'none' : 'auto',
+                    }}
+                  >
+                    {/* Center swipe area - covers the entire content */}
                     <div 
-                      className="absolute inset-0 z-10"
-                      style={{ 
-                        pointerEvents: 'none', // Allow clicks to pass through to the video
+                      className="absolute inset-0"
+                      style={{ pointerEvents: 'auto' }}
+                      onClick={(e) => {
+                        // For videos, prevent the click from reaching the video player
+                        // This allows swipes to work but prevents accidental clicks
+                        if (ad.creativeType.toLowerCase() === 'video') {
+                          e.stopPropagation();
+                        }
+                        // For images and HTML, allow the click to pass through
                       }}
-                    >
-                      {/* Swipe areas - these capture swipe gestures but allow clicks to pass through */}
-                      <div 
-                        className="absolute left-0 top-0 w-1/5 h-full" 
-                        style={{ pointerEvents: 'auto' }}
-                        onClick={(e) => e.stopPropagation()} // Prevent click from reaching video
-                      />
-                      <div 
-                        className="absolute right-0 top-0 w-1/5 h-full" 
-                        style={{ pointerEvents: 'auto' }}
-                        onClick={(e) => e.stopPropagation()} // Prevent click from reaching video
-                      />
-                      <div 
-                        className="absolute left-0 top-0 w-full h-1/5" 
-                        style={{ pointerEvents: 'auto' }}
-                        onClick={(e) => e.stopPropagation()} // Prevent click from reaching video
-                      />
-                      <div 
-                        className="absolute left-0 bottom-0 w-full h-1/5" 
-                        style={{ pointerEvents: 'auto' }}
-                        onClick={(e) => e.stopPropagation()} // Prevent click from reaching video
-                      />
-                    </div>
-                  )}
+                    />
+                  </div>
                 </div>
 
                 {/* Ad Info */}

@@ -27,7 +27,7 @@ export default function DataCenterScreen() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#1E1B2E] text-white pb-32">
+    <div className="min-h-screen bg-[#1E1B2E] text-white pb-12">
       {/* Header */}
       <header className="p-4 flex items-center">
         <button
