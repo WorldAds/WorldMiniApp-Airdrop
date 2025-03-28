@@ -51,16 +51,16 @@ export default function VideoRewardAnimation({ amount, onComplete }: VideoReward
             scale: 1,
             opacity: 1,
             y: 0,
-            duration: 1,
+            duration: 0.6,
             ease: "back.out(1.7)",
-            delay: 0.5,
+            delay: 0.2,
           },
         )
 
         // Floating animation
         gsap.to(coinRef.current, {
-          y: "+=10",
-          duration: 1.5,
+          y: "+=8",
+          duration: 1,
           repeat: -1,
           yoyo: true,
           ease: "sine.inOut",
@@ -75,9 +75,9 @@ export default function VideoRewardAnimation({ amount, onComplete }: VideoReward
           {
             opacity: 1,
             y: 0,
-            duration: 0.8,
-            stagger: 0.2,
-            delay: 0.8,
+            duration: 0.5,
+            stagger: 0.1,
+            delay: 0.4,
             ease: "power2.out",
           },
         )
@@ -85,7 +85,7 @@ export default function VideoRewardAnimation({ amount, onComplete }: VideoReward
         // Pulsing text effect
         gsap.to(amountRef.current, {
           scale: 1.05,
-          duration: 1,
+          duration: 0.8,
           repeat: -1,
           yoyo: true,
           ease: "sine.inOut",
@@ -124,17 +124,19 @@ export default function VideoRewardAnimation({ amount, onComplete }: VideoReward
       }
     }
 
-    // Set complete state after animation
+    // Set a timeout to trigger the completion callback
     const timer = setTimeout(() => {
       setIsComplete(true)
-    }, 2500)
+      if (onComplete) {
+        onComplete()
+      }
+    }, 3000)
 
-    // Cleanup function
     return () => {
-      ctx.revert() // This will kill all GSAP animations created in this context
       clearTimeout(timer)
+      ctx.revert() // Clean up all GSAP animations
     }
-  }, [amount])
+  }, [amount, onComplete])
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
@@ -206,17 +208,6 @@ export default function VideoRewardAnimation({ amount, onComplete }: VideoReward
           <p ref={textRef} className="text-xl text-gray-300 mb-8">
             Video Completed!
           </p>
-
-          {isComplete && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-              <button
-                onClick={onComplete}
-                className="bg-gradient-to-r from-amber-500 to-yellow-500 text-black hover:from-amber-600 hover:to-yellow-600 font-semibold px-8 py-6 text-lg rounded-full"
-              >
-                Collect Reward
-              </button>
-            </motion.div>
-          )}
         </div>
       </div>
 

@@ -170,8 +170,25 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     video.addEventListener("timeupdate", updateProgress);
     video.addEventListener("durationchange", updateProgress);
     video.addEventListener("ended", () => {
+      // 视频结束时触发奖励动画回调
+      if (onVideoEnd) {
+        console.log("HTML5 video ended, triggering reward animation");
+        onVideoEnd();
+      }
+      
+      // 暂停视频，等待奖励动画显示完成
+      video.pause();
       setIsPlaying(false);
-      if (onVideoEnd) onVideoEnd();
+      
+      // 在奖励动画结束后（约3秒）重新开始播放视频
+      setTimeout(() => {
+        console.log("Reward animation complete, restarting video");
+        video.currentTime = 0; // 重置视频到开始位置
+        video.play().catch(error => {
+          console.warn("Auto-replay failed:", error);
+        });
+        setIsPlaying(true);
+      }, 3500); // 设置稍长于奖励动画的时间（3秒）
     });
 
     return () => {
@@ -187,9 +204,29 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const onPlayerStateChange = (event: any) => {
     // YouTube player states: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (video cued)
     if (event.data === 0) {
-      // Video ended
+      // 视频结束时触发奖励动画回调
+      console.log("YouTube video ended, triggering reward animation");
+      if (onVideoEnd) {
+        onVideoEnd();
+      }
+      
+      // 暂停视频，等待奖励动画显示完成
+      if (youtubePlayer && typeof youtubePlayer.pauseVideo === "function") {
+        youtubePlayer.pauseVideo();
+      }
       setIsPlaying(false);
-      if (onVideoEnd) onVideoEnd();
+      
+      // 在奖励动画结束后（约3秒）重新开始播放视频
+      setTimeout(() => {
+        console.log("Reward animation complete, restarting YouTube video");
+        if (youtubePlayer && typeof youtubePlayer.seekTo === "function") {
+          youtubePlayer.seekTo(0, true); // 重置视频到开始位置
+        }
+        if (youtubePlayer && typeof youtubePlayer.playVideo === "function") {
+          youtubePlayer.playVideo();
+        }
+        setIsPlaying(true);
+      }, 3500); // 设置稍长于奖励动画的时间（3秒）
     } else if (event.data === 1) {
       // Video playing
       setIsPlaying(true);
@@ -517,11 +554,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           src={videoSrc}
           className="w-full h-full object-contain"
           playsInline
-          muted={false}
-          controls={false}
-          onEnded={() => {
-            if (onVideoEnd) onVideoEnd();
-          }}
+          preload="auto"
+          onClick={togglePlayPause}
         />
       )}
 

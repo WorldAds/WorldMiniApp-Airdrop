@@ -20,7 +20,9 @@ import VideoPlayer from "./VideoPlayer";
 import HTMLContent from "./HTMLContent";
 import Image from "next/image";
 import { Ad } from "@/@types/data";
-import VideoRewardAnimation from "./VideoRewardAnimation"; // New component for video rewards
+import VideoRewardAnimation from "./VideoRewardAnimation";
+import HtmlRewardAnimation from "./HtmlRewardAnimation";
+import ImageRewardAnimation from "./ImageRewardAnimation";
 
 export default function AdsComponent() {
   const [ads, setAds] = useState<Ad[]>([]);
@@ -28,10 +30,9 @@ export default function AdsComponent() {
   const [activeIndex, setActiveIndex] = useState(0);
   const swiperRef = useRef<SwiperType | null>(null);
   const [completedAds, setCompletedAds] = useState<Record<string, boolean>>({});
-  const [showReward, setShowReward] = useState<Record<string, boolean>>({});
-  const [showVideoReward, setShowVideoReward] = useState<
-    Record<string, boolean>
-  >({}); // New state for video rewards
+  const [showVideoReward, setShowVideoReward] = useState<Record<string, boolean>>({});
+  const [showHtmlReward, setShowHtmlReward] = useState<Record<string, boolean>>({});
+  const [showImageReward, setShowImageReward] = useState<Record<string, boolean>>({});
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [viewStartTime, setViewStartTime] = useState<Record<string, number>>(
     {}
@@ -42,7 +43,16 @@ export default function AdsComponent() {
   const pauseAllVideos = useCallback(() => {
     // Pause all HTML5 videos
     document.querySelectorAll("video").forEach((video) => {
-      video.pause();
+      try {
+        video.pause();
+        // 确保视频真的暂停了
+        if (!video.paused) {
+          video.pause();
+        }
+        console.log("Paused HTML5 video element");
+      } catch (e) {
+        console.error("Error pausing video:", e);
+      }
     });
 
     // Pause all YouTube videos
@@ -63,6 +73,7 @@ export default function AdsComponent() {
 
     // Clear current video reference when pausing all
     currentVideoRef.current = null;
+    console.log("Cleared current video reference");
   }, []);
 
   // Update the autoPlayCurrentVideo function to be more reliable
@@ -71,10 +82,25 @@ export default function AdsComponent() {
 
     // Pause all other videos first to ensure only one plays at a time
     const pauseAllVideos = () => {
+      // 保存当前视频ID
+      const currentVideoId = currentVideoRef.current;
+      
       // Find all video elements and pause them
       const videoElements = document.querySelectorAll("video");
       videoElements.forEach((video) => {
-        video.pause();
+        try {
+          // 检查是否是当前视频所在容器
+          const container = video.closest('[data-ad-id]');
+          const adId = container?.getAttribute('data-ad-id');
+          
+          // 如果不是当前视频，则暂停
+          if (adId !== currentVideoId) {
+            video.pause();
+            console.log(`Paused HTML5 video for ad: ${adId}`);
+          }
+        } catch (e) {
+          console.error("Error pausing video:", e);
+        }
       });
 
       // Find all YouTube iframes and pause them if possible
@@ -83,18 +109,29 @@ export default function AdsComponent() {
       );
       youtubeIframes.forEach((iframe) => {
         try {
-          // Try to access the contentWindow to send a postMessage
-          const contentWindow = (iframe as HTMLIFrameElement).contentWindow;
-          if (contentWindow) {
-            contentWindow.postMessage(
-              '{"event":"command","func":"pauseVideo","args":""}',
-              "*"
-            );
+          // 检查是否是当前视频所在容器
+          const container = iframe.closest('[data-ad-id]');
+          const adId = container?.getAttribute('data-ad-id');
+          
+          // 如果不是当前视频，则暂停
+          if (adId !== currentVideoId) {
+            // Try to access the contentWindow to send a postMessage
+            const contentWindow = (iframe as HTMLIFrameElement).contentWindow;
+            if (contentWindow) {
+              contentWindow.postMessage(
+                '{"event":"command","func":"pauseVideo","args":""}',
+                "*"
+              );
+              console.log(`Paused YouTube video for ad: ${adId}`);
+            }
           }
         } catch (e) {
           console.log("Could not pause YouTube iframe:", e);
         }
       });
+      
+      // 不要清除当前视频引用，这样会导致自动连播失效
+      // currentVideoRef.current = null;
     };
 
     // Pause all videos first
@@ -202,39 +239,48 @@ export default function AdsComponent() {
     }, 500);
   }, [ads]);
 
-  const handleContentComplete = (adId: string) => {
-    // Only mark as completed if not already completed
-    if (!completedAds[adId]) {
-      setCompletedAds((prev) => ({ ...prev, [adId]: true }));
+  const handleContentComplete = useCallback((adId: string) => {
+    // Mark the ad as completed
+    setCompletedAds((prev) => {
+      if (prev[adId]) return prev;
+      return { ...prev, [adId]: true };
+    });
 
-      // Find the ad to determine its type
-      const ad = ads.find((ad) => ad._id === adId);
+    // Get the current ad
+    const currentAd = ads.find((ad) => ad._id === adId);
+    if (!currentAd) return;
 
-      if (ad) {
-        // Only show animation for video type ads
-        if (
-          ad.creativeType.toLowerCase() === "video" ||
-          ad.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
-          ad.creativeURL.includes("youtube.com") ||
-          ad.creativeURL.includes("youtu.be")
-        ) {
-          // For video ads, show the video reward animation
-          console.log(`Video ad completed: ${ad.adsName}`);
-        } else {
-          // For HTML and image ads, just log a message
-          console.log(`Non-video ad viewed: ${ad.adsName}`);
-        }
-      }
+    // Log the completion
+    console.log(`Ad completed: ${currentAd.adsName}`);
+
+    // Set reward based on ad type
+    if (
+      currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
+      currentAd.creativeURL.includes("youtube.com") ||
+      currentAd.creativeURL.includes("youtu.be")
+    ) {
+      // Video reward
+      setShowVideoReward((prev) => ({ ...prev, [adId]: true }));
+    } else if (currentAd.creativeType.toLowerCase() === "html") {
+      // HTML reward
+      setShowHtmlReward((prev) => ({ ...prev, [adId]: true }));
+    } else if (
+      currentAd.creativeType.toLowerCase() === "image" ||
+      currentAd.creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+    ) {
+      // Image reward
+      setShowImageReward((prev) => ({ ...prev, [adId]: true }));
     }
-  };
+  }, [ads]);
 
-  const handleRewardComplete = (adId: string) => {
-    setShowReward((prev) => ({ ...prev, [adId]: false }));
-  };
+  const handleRewardComplete = useCallback((adId: string) => {
+    setShowHtmlReward((prev) => ({ ...prev, [adId]: false }));
+    setShowImageReward((prev) => ({ ...prev, [adId]: false }));
+  }, []);
 
-  const handleVideoRewardComplete = (adId: string) => {
+  const handleVideoRewardComplete = useCallback((adId: string) => {
     setShowVideoReward((prev) => ({ ...prev, [adId]: false }));
-  };
+  }, []);
 
   const renderAdContent = (ad: Ad) => {
     switch (ad.creativeType.toLowerCase()) {
@@ -247,8 +293,7 @@ export default function AdsComponent() {
               fill
               className="object-contain rounded-lg"
               onLoadingComplete={() => {
-                // For images, just mark as complete without animation
-                handleContentComplete(ad._id);
+                console.log(`Image loaded: ${ad.adsName}`);
               }}
             />
           </div>
@@ -260,8 +305,7 @@ export default function AdsComponent() {
             <HTMLContent
               htmlUrl={ad.creativeURL}
               onLoad={() => {
-                // For HTML content, just mark as complete without animation
-                handleContentComplete(ad._id);
+                console.log(`HTML content loaded: ${ad.adsName}`);
               }}
               fallbackContent={
                 <div className="w-full h-full flex items-center justify-center bg-gray-800">
@@ -298,8 +342,6 @@ export default function AdsComponent() {
               videoSrc={ad.creativeURL}
               onVideoEnd={() => {
                 handleContentComplete(ad._id);
-                // Only show reward animation for video ads
-                setShowVideoReward((prev) => ({ ...prev, [ad._id]: true }));
               }}
               allowProgressControl={true}
               isActive={currentVideoRef.current === ad._id}
@@ -317,8 +359,7 @@ export default function AdsComponent() {
                 fill
                 className="object-contain rounded-lg"
                 onLoadingComplete={() => {
-                  // For images, just mark as complete without animation
-                  handleContentComplete(ad._id);
+                  console.log(`Image loaded: ${ad.adsName}`);
                 }}
               />
             </div>
@@ -334,8 +375,6 @@ export default function AdsComponent() {
                 videoSrc={ad.creativeURL}
                 onVideoEnd={() => {
                   handleContentComplete(ad._id);
-                  // Only show reward animation for video ads
-                  setShowVideoReward((prev) => ({ ...prev, [ad._id]: true }));
                 }}
                 allowProgressControl={true}
                 isActive={currentVideoRef.current === ad._id}
@@ -370,19 +409,32 @@ export default function AdsComponent() {
       // Set the view start time for the first ad
       setViewStartTime((prev) => ({ ...prev, [firstAd._id]: Date.now() }));
       
-      // For non-video ads, set a timer to mark as completed after 10 seconds
-      if (
-        firstAd.creativeType.toLowerCase() !== "video" &&
-        !firstAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) &&
-        !firstAd.creativeURL.includes("youtube.com") &&
-        !firstAd.creativeURL.includes("youtu.be")
-      ) {
+      // For HTML ads, set a timer to mark as completed after 10 seconds
+      if (firstAd.creativeType.toLowerCase() === "html") {
+        console.log(`Setting 10 second timer for HTML ad: ${firstAd.adsName}`);
         timerRef.current = setTimeout(() => {
-          console.log(`Non-video ad viewed: ${firstAd.adsName}`);
+          console.log(`HTML ad viewed for 10 seconds: ${firstAd.adsName}`);
+          handleContentComplete(firstAd._id);
         }, 10000);
-      }
-      // Auto-play the first video if it's a video ad
-      else {
+      } 
+      // For Image ads, set a timer to mark as completed after 5 seconds
+      else if (
+        firstAd.creativeType.toLowerCase() === "image" ||
+        firstAd.creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+      ) {
+        console.log(`Setting 5 second timer for Image ad: ${firstAd.adsName}`);
+        timerRef.current = setTimeout(() => {
+          console.log(`Image ad viewed for 5 seconds: ${firstAd.adsName}`);
+          handleContentComplete(firstAd._id);
+        }, 5000);
+      } 
+      // For video ads, set the current video reference and auto-play
+      else if (
+        firstAd.creativeType.toLowerCase() === "video" ||
+        firstAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
+        firstAd.creativeURL.includes("youtube.com") ||
+        firstAd.creativeURL.includes("youtu.be")
+      ) {
         // Set current video reference to the first ad
         currentVideoRef.current = firstAd._id;
         
@@ -401,14 +453,88 @@ export default function AdsComponent() {
         }
       };
     }
-  }, [ads, loading, autoPlayCurrentVideo]);
+  }, [ads, loading, autoPlayCurrentVideo, handleContentComplete]);
 
   const handleSlideChange = (swiper: SwiperType) => {
     const newIndex = swiper.activeIndex;
     setActiveIndex(newIndex);
     
-    // Pause all videos when changing slides
+    // 获取当前广告和前一个广告
+    const currentAd = ads[newIndex];
+    const previousIndex = swiper.previousIndex;
+    const previousAd = ads[previousIndex];
+    
+    // 记录滑动切换日志
+    console.log(`Slide changed from ${previousIndex} to ${newIndex}`);
+    if (previousAd) {
+      console.log(`Previous ad: ${previousAd.adsName}, type: ${previousAd.creativeType}`);
+    }
+    if (currentAd) {
+      console.log(`Current ad: ${currentAd.adsName}, type: ${currentAd.creativeType}`);
+    }
+    
+    // 检查当前广告是否是视频
+    const isCurrentVideo = currentAd && (
+      currentAd.creativeType.toLowerCase() === "video" ||
+      currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
+      currentAd.creativeURL.includes("youtube.com") ||
+      currentAd.creativeURL.includes("youtu.be")
+    );
+    
+    // 如果当前广告是视频，设置为当前视频引用
+    if (isCurrentVideo) {
+      currentVideoRef.current = currentAd._id;
+      console.log(`Set current video to: ${currentAd.adsName}`);
+    }
+    
+    // 强制暂停所有视频，确保没有视频在后台播放
     pauseAllVideos();
+    
+    // 额外检查：如果前一个广告是视频，确保它被暂停
+    if (previousAd && (
+      previousAd.creativeType.toLowerCase() === "video" ||
+      previousAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
+      previousAd.creativeURL.includes("youtube.com") ||
+      previousAd.creativeURL.includes("youtu.be")
+    )) {
+      // 查找前一个广告的容器和视频元素
+      const prevAdContainer = document.querySelector(
+        `[data-ad-id="${previousAd._id}"]`
+      );
+      
+      if (prevAdContainer) {
+        // 暂停 HTML5 视频
+        const video = prevAdContainer.querySelector("video");
+        if (video) {
+          try {
+            video.pause();
+            console.log(`Explicitly paused previous video: ${previousAd.adsName}`);
+          } catch (e) {
+            console.error("Error pausing previous video:", e);
+          }
+        }
+        
+        // 暂停 YouTube 视频
+        const iframe = prevAdContainer.querySelector("iframe");
+        if (iframe && (
+          previousAd.creativeURL.includes("youtube.com") || 
+          previousAd.creativeURL.includes("youtu.be")
+        )) {
+          try {
+            const contentWindow = (iframe as HTMLIFrameElement).contentWindow;
+            if (contentWindow) {
+              contentWindow.postMessage(
+                '{"event":"command","func":"pauseVideo","args":""}',
+                "*"
+              );
+              console.log(`Explicitly paused previous YouTube video: ${previousAd.adsName}`);
+            }
+          } catch (e) {
+            console.error("Error pausing previous YouTube video:", e);
+          }
+        }
+      }
+    }
     
     // Clear any existing timer
     if (timerRef.current) {
@@ -417,25 +543,37 @@ export default function AdsComponent() {
     }
     
     // Get the current ad
-    const currentAd = ads[newIndex];
     if (!currentAd) return;
     
     // Set the view start time for the current ad
     setViewStartTime((prev) => ({ ...prev, [currentAd._id]: Date.now() }));
     
-    // For non-video ads, set a timer to mark as completed after 10 seconds
-    if (
-      currentAd.creativeType.toLowerCase() !== "video" &&
-      !currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) &&
-      !currentAd.creativeURL.includes("youtube.com") &&
-      !currentAd.creativeURL.includes("youtu.be")
-    ) {
+    // For HTML ads, set a timer to mark as completed after 10 seconds
+    if (currentAd.creativeType.toLowerCase() === "html") {
+      console.log(`Setting 10 second timer for HTML ad: ${currentAd.adsName}`);
       timerRef.current = setTimeout(() => {
-        console.log(`Non-video ad viewed: ${currentAd.adsName}`);
+        console.log(`HTML ad viewed for 10 seconds: ${currentAd.adsName}`);
+        handleContentComplete(currentAd._id);
       }, 10000);
+    } 
+    // For Image ads, set a timer to mark as completed after 5 seconds
+    else if (
+      currentAd.creativeType.toLowerCase() === "image" ||
+      currentAd.creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+    ) {
+      console.log(`Setting 5 second timer for Image ad: ${currentAd.adsName}`);
+      timerRef.current = setTimeout(() => {
+        console.log(`Image ad viewed for 5 seconds: ${currentAd.adsName}`);
+        handleContentComplete(currentAd._id);
+      }, 5000);
     }
     // For video ads, set the current video reference and auto-play
-    else {
+    else if (
+      currentAd.creativeType.toLowerCase() === "video" ||
+      currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
+      currentAd.creativeURL.includes("youtube.com") ||
+      currentAd.creativeURL.includes("youtu.be")
+    ) {
       currentVideoRef.current = currentAd._id;
       
       // Add a slight delay to ensure components are mounted
@@ -571,6 +709,18 @@ export default function AdsComponent() {
                   <VideoRewardAnimation
                     amount={10}
                     onComplete={() => handleVideoRewardComplete(ad._id)}
+                  />
+                )}
+                {showHtmlReward[ad._id] && (
+                  <HtmlRewardAnimation
+                    amount={5}
+                    onComplete={() => handleRewardComplete(ad._id)}
+                  />
+                )}
+                {showImageReward[ad._id] && (
+                  <ImageRewardAnimation
+                    amount={5}
+                    onComplete={() => handleRewardComplete(ad._id)}
                   />
                 )}
 
