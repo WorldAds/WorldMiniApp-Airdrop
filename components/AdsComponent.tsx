@@ -1,123 +1,17 @@
-// 'use client';
-
-// import { useState, useEffect } from 'react';
-// import { Swiper, SwiperSlide } from 'swiper/react';
-// import 'swiper/css';
-// import 'swiper/css/navigation';
-// import 'swiper/css/pagination';
-// import 'swiper/css/scrollbar';
-
-// import WelcomeMessage from './WelcomeMessage';
-// import ClaimButton from './buttons/ClaimButton';
-// import CommentButton from './buttons/CommentButton';
-// import TaskButton from './buttons/TaskButton';
-// import Image from 'next/image';
-// import Footer from './Footer';
-// import Header from './Header';
-
-// const NUM_IMAGES = 20;
-// const VIDEO_ADS = [1, 2, 5, 7, 9, 4, 11, 12, 13, 14, 15, 16, 17, 18];
-
-// interface Ad {
-//   id: number;
-//   isVideo: boolean;
-// }
-
-// export default function AdsComponent() {
-//   const [ads, setAds] = useState<Ad[]>([]);
-
-//   useEffect(() => {
-//     const allAds = Array.from({ length: NUM_IMAGES }, (_, i) => ({
-//       id: i + 1,
-//       isVideo: VIDEO_ADS.includes(i + 1),
-//     }));
-//     setAds(allAds);
-//   }, []);
-
-//   return (
-//     <div className="min-h-screen bg-[#2A203B]">
-//       <Header />
-//       <main className="flex flex-col items-center justify-start py-20">
-//         <Swiper
-//           direction="vertical"
-//           slidesPerView={1}
-//           spaceBetween={0}
-//           className="w-full h-screen"
-//         >
-//           {ads.map((ad) => (
-//             <SwiperSlide key={ad.id}>
-//               <div className="relative w-full h-screen flex items-center justify-center">
-//                 {/* Display Ad */}
-//                 {ad.isVideo ? (
-//                   <video
-//                     src={`/videos/${ad.id}.mp4`}
-//                     className="w-auto h-auto max-w-full max-h-full rounded-lg"
-//                     controls
-//                     autoPlay
-//                     muted
-//                     loop
-//                   />
-//                 ) : (
-//                   <Image
-//                     src={`/images/${ad.id}.webp`}
-//                     alt={`Advertisement ${ad.id}`}
-//                     fill
-//                     className="object-cover"
-//                   />
-//                 )}
-
-//                 {/* Welcome Message */}
-//                 <div
-//                   className="absolute"
-//                   style={{
-//                     top: '67%',
-//                     left: '5%',
-//                     transform: 'translateY(-50%)',
-//                   }}
-//                 >
-//                   <WelcomeMessage />
-//                 </div>
-
-//                 {/* Action Buttons */}
-//                 <div
-//                   className="absolute flex flex-col space-y-2"
-//                   style={{
-//                     top: '67%',
-//                     right: '5%',
-//                     transform: 'translateY(-50%)',
-//                   }}
-//                 >
-//                   <div>
-//                     <ClaimButton imageNumber={ad.id} />
-//                   </div>
-//                   <div>
-//                     <CommentButton />
-//                   </div>
-//                   <div>
-//                     <TaskButton onReturn={() => {}} />
-//                   </div>
-//                 </div>
-//               </div>
-//             </SwiperSlide>
-//           ))}
-//         </Swiper>
-//       </main>
-//       <Footer />
-//     </div>
-//   );
-// }
 "use client";
 
-import React, { useState, useEffect, lazy, Suspense, useRef } from "react";
-import WelcomeMessage from "./WelcomeMessage";
-import ClaimButton from "./buttons/ClaimButton";
-import FavouriteButton from "./buttons/FavouriteButton";
-import ReturnButton from "./buttons/ReturnButton";
+import React, {
+  useState,
+  useEffect,
+  Suspense,
+  useRef,
+  useCallback,
+} from "react";
 import Footer from "./Footer";
-import Header from "./Header";
+import AdActionButtons from "./AdActionButtons";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Mousewheel, Keyboard } from "swiper/modules";
-import type { Swiper as SwiperType } from 'swiper';
+import type { Swiper as SwiperType } from "swiper";
 import "swiper/css";
 import "swiper/css/mousewheel";
 import "swiper/css/keyboard";
@@ -125,94 +19,267 @@ import { getAdsList } from "@/app/api/service";
 import VideoPlayer from "./VideoPlayer";
 import HTMLContent from "./HTMLContent";
 import Image from "next/image";
-
-interface Ad {
-  adsName: string;
-  budget: number;
-  startDate: string;
-  endDate: string;
-  targetAudience: string;
-  locations: string[];
-  creativeType: string; // Image/Html/Video
-  creativeURL: string;
-  _id: string; // MongoDB ID from the API
-}
+import { Ad } from "@/@types/data";
+import VideoRewardAnimation from "./VideoRewardAnimation"; // New component for video rewards
 
 export default function AdsComponent() {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
   const swiperRef = useRef<SwiperType | null>(null);
-  useEffect(() => {
-    const fetchAds = async () => {
-      try {
-        setLoading(true);
-        const adsData = await getAdsList();
-        console.log("Fetched ads:", adsData);
-        
-        setAds(adsData);
-      } catch (error) {
-        console.error('Failed to load ads:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const [completedAds, setCompletedAds] = useState<Record<string, boolean>>({});
+  const [showReward, setShowReward] = useState<Record<string, boolean>>({});
+  const [showVideoReward, setShowVideoReward] = useState<
+    Record<string, boolean>
+  >({}); // New state for video rewards
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [viewStartTime, setViewStartTime] = useState<Record<string, number>>(
+    {}
+  );
+  const currentVideoRef = useRef<string | null>(null);
 
-    fetchAds();
+  // Function to pause all videos
+  const pauseAllVideos = useCallback(() => {
+    // Pause all HTML5 videos
+    document.querySelectorAll("video").forEach((video) => {
+      video.pause();
+    });
+
+    // Pause all YouTube videos
+    if (window.YT && typeof window.YT.get === "function") {
+      document
+        .querySelectorAll('iframe[src*="youtube.com"]')
+        .forEach((iframe) => {
+          try {
+            const player = window.YT?.get(iframe.id);
+            if (player && typeof player.pauseVideo === "function") {
+              player.pauseVideo();
+            }
+          } catch (e) {
+            console.warn("Error pausing YouTube player:", e);
+          }
+        });
+    }
+
+    // Clear current video reference when pausing all
+    currentVideoRef.current = null;
   }, []);
 
-  // Track which ads have been viewed completely
-  const [completedAds, setCompletedAds] = useState<Record<string, boolean>>({});
+  // Update the autoPlayCurrentVideo function to be more reliable
+  const autoPlayCurrentVideo = useCallback(() => {
+    if (!currentVideoRef.current) return;
 
-  // Mark an ad as completed when its content is fully viewed
+    // Pause all other videos first to ensure only one plays at a time
+    const pauseAllVideos = () => {
+      // Find all video elements and pause them
+      const videoElements = document.querySelectorAll("video");
+      videoElements.forEach((video) => {
+        video.pause();
+      });
+
+      // Find all YouTube iframes and pause them if possible
+      const youtubeIframes = document.querySelectorAll(
+        'iframe[src*="youtube.com"]'
+      );
+      youtubeIframes.forEach((iframe) => {
+        try {
+          // Try to access the contentWindow to send a postMessage
+          const contentWindow = (iframe as HTMLIFrameElement).contentWindow;
+          if (contentWindow) {
+            contentWindow.postMessage(
+              '{"event":"command","func":"pauseVideo","args":""}',
+              "*"
+            );
+          }
+        } catch (e) {
+          console.log("Could not pause YouTube iframe:", e);
+        }
+      });
+    };
+
+    // Pause all videos first
+    pauseAllVideos();
+
+    // Add a longer delay to ensure the player is ready
+    setTimeout(() => {
+      const currentAd = ads.find((ad) => ad._id === currentVideoRef.current);
+      if (currentAd) {
+        // Log the current ad being played
+        console.log(
+          "Auto-playing video for ad:",
+          currentAd.adsName,
+          "URL:",
+          currentAd.creativeURL
+        );
+
+        // For YouTube Shorts, we need special handling
+        if (currentAd.creativeURL.includes("youtube.com/shorts/")) {
+          console.log("Detected YouTube Shorts URL, applying special handling");
+
+          // Find the specific iframe for this ad
+          const adContainer = document.querySelector(
+            `[data-ad-id="${currentAd._id}"]`
+          );
+          if (adContainer) {
+            // Refresh the iframe - this is the most reliable method for Shorts
+            const iframe = adContainer.querySelector("iframe");
+            if (iframe) {
+              console.log("Refreshing YouTube Shorts iframe");
+              
+              // Store original src
+              const originalSrc = iframe.src;
+              
+              // Add autoplay=1 parameter if not already present
+              let newSrc = originalSrc;
+              if (!newSrc.includes("autoplay=1")) {
+                newSrc = newSrc.replace("autoplay=0", "autoplay=1");
+                if (!newSrc.includes("autoplay=")) {
+                  newSrc += (newSrc.includes("?") ? "&" : "?") + "autoplay=1";
+                }
+              }
+              
+              // Force reload by changing src
+              iframe.src = newSrc;
+              
+              // Don't try other methods for Shorts to avoid conflicts
+              return;
+            }
+          }
+        }
+        // For regular YouTube videos, use the YouTube API
+        else if (
+          (currentAd.creativeURL.includes("youtube.com") || 
+           currentAd.creativeURL.includes("youtu.be")) && 
+          !currentAd.creativeURL.includes("shorts")
+        ) {
+          // Find the specific iframe for this ad
+          const adContainer = document.querySelector(
+            `[data-ad-id="${currentAd._id}"]`
+          );
+          
+          if (adContainer) {
+            const iframe = adContainer.querySelector("iframe");
+            if (iframe) {
+              try {
+                // Try to send a postMessage to play the video
+                const contentWindow = (iframe as HTMLIFrameElement).contentWindow;
+                if (contentWindow) {
+                  contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', "*");
+                  console.log("Sent playVideo command via postMessage to regular YouTube video");
+                }
+              } catch (e) {
+                console.error("Error sending postMessage to YouTube iframe:", e);
+              }
+            }
+          }
+        }
+        // For regular video elements, use the standard video API
+        else if (currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i)) {
+          const adContainer = document.querySelector(
+            `[data-ad-id="${currentAd._id}"]`
+          );
+          
+          if (adContainer) {
+            const video = adContainer.querySelector("video");
+            if (video) {
+              try {
+                video.play()
+                  .then(() => console.log("Regular video playing successfully"))
+                  .catch(e => console.error("Error playing regular video:", e));
+              } catch (e) {
+                console.error("Error with video.play():", e);
+              }
+            }
+          }
+        }
+        
+        // Force a re-render of the video player to ensure it's properly initialized
+        // But only for non-shorts videos to avoid conflicts
+        if (!currentAd.creativeURL.includes("youtube.com/shorts/")) {
+          setAds((prevAds) => [...prevAds]);
+        }
+      }
+    }, 500);
+  }, [ads]);
+
   const handleContentComplete = (adId: string) => {
-    setCompletedAds((prev) => ({
-      ...prev,
-      [adId]: true,
-    }));
+    // Only mark as completed if not already completed
+    if (!completedAds[adId]) {
+      setCompletedAds((prev) => ({ ...prev, [adId]: true }));
+
+      // Find the ad to determine its type
+      const ad = ads.find((ad) => ad._id === adId);
+
+      if (ad) {
+        // Only show animation for video type ads
+        if (
+          ad.creativeType.toLowerCase() === "video" ||
+          ad.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
+          ad.creativeURL.includes("youtube.com") ||
+          ad.creativeURL.includes("youtu.be")
+        ) {
+          // For video ads, show the video reward animation
+          console.log(`Video ad completed: ${ad.adsName}`);
+        } else {
+          // For HTML and image ads, just log a message
+          console.log(`Non-video ad viewed: ${ad.adsName}`);
+        }
+      }
+    }
   };
 
-  // Check if content is HTML
-  const isHtmlContent = (content: string): boolean => {
-    const trimmed = content.trim();
-    return (
-      trimmed.startsWith('<!DOCTYPE') || 
-      trimmed.startsWith('<html') || 
-      (trimmed.includes('<') && trimmed.includes('>') && trimmed.includes('</'))
-    );
+  const handleRewardComplete = (adId: string) => {
+    setShowReward((prev) => ({ ...prev, [adId]: false }));
   };
 
-  // Render the appropriate content based on creativeType
+  const handleVideoRewardComplete = (adId: string) => {
+    setShowVideoReward((prev) => ({ ...prev, [adId]: false }));
+  };
+
   const renderAdContent = (ad: Ad) => {
     switch (ad.creativeType.toLowerCase()) {
-      case 'image':
+      case "image":
         return (
-          <div className="relative w-full h-full">
+          <div className="relative w-full h-full" data-ad-id={ad._id}>
             <Image
               src={ad.creativeURL}
               alt={ad.adsName}
               fill
               className="object-contain rounded-lg"
-              onLoadingComplete={() => handleContentComplete(ad._id)}
+              onLoadingComplete={() => {
+                // For images, just mark as complete without animation
+                handleContentComplete(ad._id);
+              }}
             />
           </div>
         );
-      
-      case 'html':
+
+      case "html":
         return (
-          <div className="relative w-full h-full">
-            <HTMLContent 
-              htmlUrl={ad.creativeURL} 
-              onLoad={() => handleContentComplete(ad._id)}
+          <div className="relative w-full h-full" data-ad-id={ad._id}>
+            <HTMLContent
+              htmlUrl={ad.creativeURL}
+              onLoad={() => {
+                // For HTML content, just mark as complete without animation
+                handleContentComplete(ad._id);
+              }}
               fallbackContent={
                 <div className="w-full h-full flex items-center justify-center bg-gray-800">
                   <div className="text-center p-4">
-                    <h3 className="text-white font-bold text-xl mb-2">{ad.adsName}</h3>
+                    <h3 className="text-white font-bold text-xl mb-2">
+                      {ad.adsName}
+                    </h3>
                     <p className="text-gray-300">
                       This content cannot be displayed in the app.
                     </p>
-                    <button 
-                      onClick={() => window.open(ad.creativeURL, '_blank', 'noopener,noreferrer')}
+                    <button
+                      onClick={() =>
+                        window.open(
+                          ad.creativeURL,
+                          "_blank",
+                          "noopener,noreferrer"
+                        )
+                      }
                       className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                     >
                       Visit Website
@@ -223,47 +290,179 @@ export default function AdsComponent() {
             />
           </div>
         );
-      
-      case 'video':
+
+      case "video":
         return (
-          <VideoPlayer 
-            videoSrc={ad.creativeURL}
-            onVideoEnd={() => handleContentComplete(ad._id)}
-          />
+          <div className="relative w-full h-full" data-ad-id={ad._id}>
+            <VideoPlayer
+              videoSrc={ad.creativeURL}
+              onVideoEnd={() => {
+                handleContentComplete(ad._id);
+                // Only show reward animation for video ads
+                setShowVideoReward((prev) => ({ ...prev, [ad._id]: true }));
+              }}
+              allowProgressControl={true}
+              isActive={currentVideoRef.current === ad._id}
+            />
+          </div>
         );
-      
+
       default:
-        // Try to guess the type from the URL
         if (ad.creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
           return (
-            <div className="relative w-full h-full">
+            <div className="relative w-full h-full" data-ad-id={ad._id}>
               <Image
                 src={ad.creativeURL}
                 alt={ad.adsName}
                 fill
                 className="object-contain rounded-lg"
-                onLoadingComplete={() => handleContentComplete(ad._id)}
+                onLoadingComplete={() => {
+                  // For images, just mark as complete without animation
+                  handleContentComplete(ad._id);
+                }}
               />
             </div>
           );
-        } else if (ad.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) || 
-                  ad.creativeURL.includes('youtube.com') || 
-                  ad.creativeURL.includes('youtu.be')) {
+        } else if (
+          ad.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
+          ad.creativeURL.includes("youtube.com") ||
+          ad.creativeURL.includes("youtu.be")
+        ) {
           return (
-            <VideoPlayer 
-              videoSrc={ad.creativeURL}
-              onVideoEnd={() => handleContentComplete(ad._id)}
-            />
+            <div className="relative w-full h-full" data-ad-id={ad._id}>
+              <VideoPlayer
+                videoSrc={ad.creativeURL}
+                onVideoEnd={() => {
+                  handleContentComplete(ad._id);
+                  // Only show reward animation for video ads
+                  setShowVideoReward((prev) => ({ ...prev, [ad._id]: true }));
+                }}
+                allowProgressControl={true}
+                isActive={currentVideoRef.current === ad._id}
+              />
+            </div>
           );
         }
-        
+
         return (
-          <div className="flex items-center justify-center w-full h-full">
-            <p className="text-white text-xl">Unsupported ad type: {ad.creativeType}</p>
+          <div
+            className="flex items-center justify-center w-full h-full"
+            data-ad-id={ad._id}
+          >
+            <p className="text-white text-xl">
+              Unsupported ad type: {ad.creativeType}
+            </p>
           </div>
         );
     }
   };
+
+  useEffect(() => {
+    if (!loading && ads.length > 0) {
+      const firstAd = ads[0];
+      
+      // Clear any existing timer
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      
+      // Set the view start time for the first ad
+      setViewStartTime((prev) => ({ ...prev, [firstAd._id]: Date.now() }));
+      
+      // For non-video ads, set a timer to mark as completed after 10 seconds
+      if (
+        firstAd.creativeType.toLowerCase() !== "video" &&
+        !firstAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) &&
+        !firstAd.creativeURL.includes("youtube.com") &&
+        !firstAd.creativeURL.includes("youtu.be")
+      ) {
+        timerRef.current = setTimeout(() => {
+          console.log(`Non-video ad viewed: ${firstAd.adsName}`);
+        }, 10000);
+      }
+      // Auto-play the first video if it's a video ad
+      else {
+        // Set current video reference to the first ad
+        currentVideoRef.current = firstAd._id;
+        
+        // Add a slight delay to ensure components are mounted
+        setTimeout(() => {
+          console.log("Auto-playing first video ad:", firstAd.adsName);
+          autoPlayCurrentVideo();
+        }, 300);
+      }
+      
+      // Clean up function
+      return () => {
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+      };
+    }
+  }, [ads, loading, autoPlayCurrentVideo]);
+
+  const handleSlideChange = (swiper: SwiperType) => {
+    const newIndex = swiper.activeIndex;
+    setActiveIndex(newIndex);
+    
+    // Pause all videos when changing slides
+    pauseAllVideos();
+    
+    // Clear any existing timer
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    
+    // Get the current ad
+    const currentAd = ads[newIndex];
+    if (!currentAd) return;
+    
+    // Set the view start time for the current ad
+    setViewStartTime((prev) => ({ ...prev, [currentAd._id]: Date.now() }));
+    
+    // For non-video ads, set a timer to mark as completed after 10 seconds
+    if (
+      currentAd.creativeType.toLowerCase() !== "video" &&
+      !currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) &&
+      !currentAd.creativeURL.includes("youtube.com") &&
+      !currentAd.creativeURL.includes("youtu.be")
+    ) {
+      timerRef.current = setTimeout(() => {
+        console.log(`Non-video ad viewed: ${currentAd.adsName}`);
+      }, 10000);
+    }
+    // For video ads, set the current video reference and auto-play
+    else {
+      currentVideoRef.current = currentAd._id;
+      
+      // Add a slight delay to ensure components are mounted
+      setTimeout(() => {
+        console.log("Auto-playing video for slide change:", currentAd.adsName);
+        autoPlayCurrentVideo();
+      }, 300);
+    }
+  };
+
+  useEffect(() => {
+    const fetchAds = async () => {
+      try {
+        setLoading(true);
+        const adsData = await getAdsList();
+        console.log("Fetched ads:", adsData);
+
+        setAds(adsData);
+      } catch (error) {
+        console.error("Failed to load ads:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAds();
+  }, []);
 
   if (loading) {
     return (
@@ -283,7 +482,6 @@ export default function AdsComponent() {
 
   return (
     <div className="min-h-screen bg-[#2A203B] overflow-hidden">
-      {/* <Header /> */}
       <main className="flex flex-col items-center justify-center">
         <Swiper
           modules={[Mousewheel, Keyboard]}
@@ -291,140 +489,165 @@ export default function AdsComponent() {
           spaceBetween={0}
           slidesPerView={1}
           mousewheel={{
-            sensitivity: 3, // Increased sensitivity (was 1)
-            thresholdDelta: 20 // Lower threshold (was 50)
+            sensitivity: 3,
+            thresholdDelta: 20,
           }}
           keyboard={{
             enabled: true,
           }}
-          threshold={10} // Even lower threshold for swipe detection (was 20)
-          resistance={false} // No resistance at the edges
-          touchReleaseOnEdges={true} // Release touch events on edges
-          longSwipes={true} // Enable long swipes
-          longSwipesRatio={0.05} // Lower ratio for long swipes (was 0.1) - more sensitive
-          shortSwipes={true} // Enable short swipes
-          followFinger={true} // Follow finger movement
-          speed={250} // Slightly faster transition speed (was 300)
-          simulateTouch={true} // Simulate touch events on desktop
-          touchStartPreventDefault={false} // Don't prevent default touch action
-          touchMoveStopPropagation={true} // Stop propagation of touchmove events
-          grabCursor={true} // Show grab cursor
+          threshold={10}
+          resistance={false}
+          touchReleaseOnEdges={true}
+          longSwipes={true}
+          longSwipesRatio={0.05}
+          shortSwipes={true}
+          followFinger={true}
+          speed={250}
+          simulateTouch={true}
+          touchStartPreventDefault={false}
+          touchMoveStopPropagation={false}
+          grabCursor={true}
+          touchAngle={45}
+          touchRatio={1}
+          edgeSwipeDetection={true}
+          preventInteractionOnTransition={false}
           className="w-full h-[calc(100vh-3rem)]"
           onSwiper={(swiper) => {
             swiperRef.current = swiper;
           }}
-          onSlideChange={(swiper: SwiperType) => {
-            // Get previous and current indices
-            const prevIndex = activeIndex;
-            const currentIndex = swiper.activeIndex;
-            
-            // Update active index
-            setActiveIndex(currentIndex);
-            
-            // Determine swipe direction
-            const direction = currentIndex > prevIndex ? 'down' : 'up';
-            
-            // Get the current ad
-            const currentAd = ads[currentIndex];
-            if (!currentAd) return;
-            
-            // Get the previous ad (the one we're leaving)
-            const prevAd = ads[prevIndex];
-            
-            // Log the navigation for debugging
-            console.log(`Navigating ${direction} from ad ${prevIndex} to ad ${currentIndex}`);
-            
-            // Only run browser-specific code on the client side
-            if (typeof window !== 'undefined') {
-              // Pause all videos to ensure clean state
-              document.querySelectorAll('video').forEach(video => {
-                video.pause();
-              });
-              
-              // Pause all YouTube players
-              if (window.YT && typeof window.YT.get === 'function') {
-                document.querySelectorAll('iframe[src*="youtube.com"]').forEach(iframe => {
-                  try {
-                    const player = window.YT?.get(iframe.id);
-                    if (player && typeof player.pauseVideo === 'function') {
-                      player.pauseVideo();
-                    }
-                  } catch (e) {
-                    console.warn("Error pausing YouTube player:", e);
-                  }
-                });
-              }
-            }
-            
-            // Auto-play videos when they become visible
-            if (currentAd.creativeType.toLowerCase() === 'video' || 
-                currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) || 
-                currentAd.creativeURL.includes('youtube.com') || 
-                currentAd.creativeURL.includes('youtu.be')) {
-              // The VideoPlayer component will handle autoplay
-              console.log(`Auto-playing video for ad: ${currentAd.adsName}`);
-            }
-          }}
+          onSlideChange={handleSlideChange}
         >
           {ads.map((ad) => (
             <SwiperSlide
               key={ad._id}
               className="flex items-center justify-center"
             >
-              <div className="relative w-full h-full flex items-center justify-center">
-                {/* Content Container */}
-                <div className="relative w-full h-full">
-                  <Suspense fallback={<div className="text-white">Loading ad content...</div>}>
-                    {renderAdContent(ad)}
-                  </Suspense>
-                  
-                  {/* Swipe Overlay for all content types to ensure consistent swipe behavior */}
-                  <div 
-                    className="absolute inset-0 z-10"
-                    style={{ 
-                      pointerEvents: ad.creativeType.toLowerCase() === 'video' ? 'none' : 'auto',
+              <div className="relative w-full h-full">
+                <Suspense
+                  fallback={
+                    <div className="text-white">Loading ad content...</div>
+                  }
+                >
+                  {renderAdContent(ad)}
+                </Suspense>
+
+                <div
+                  className="absolute inset-0 z-10"
+                  style={{
+                    pointerEvents:
+                      ad.creativeType.toLowerCase() === "video" ||
+                      ad.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
+                      ad.creativeURL.includes("youtube.com") ||
+                      ad.creativeURL.includes("youtu.be")
+                        ? "none"
+                        : "auto",
+                  }}
+                >
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      pointerEvents:
+                        ad.creativeType.toLowerCase() === "video" ||
+                        ad.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
+                        ad.creativeURL.includes("youtube.com") ||
+                        ad.creativeURL.includes("youtu.be")
+                          ? "none"
+                          : "auto",
                     }}
-                  >
-                    {/* Center swipe area - covers the entire content */}
-                    <div 
-                      className="absolute inset-0"
-                      style={{ pointerEvents: 'auto' }}
-                      onClick={(e) => {
-                        // For videos, prevent the click from reaching the video player
-                        // This allows swipes to work but prevents accidental clicks
-                        if (ad.creativeType.toLowerCase() === 'video') {
-                          e.stopPropagation();
+                    onClick={(e) => {
+                      if (
+                        ad.creativeType.toLowerCase() !== "video" &&
+                        !ad.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) &&
+                        !ad.creativeURL.includes("youtube.com") &&
+                        !ad.creativeURL.includes("youtu.be")
+                      ) {
+                        e.stopPropagation();
+                      }
+                    }}
+                  />
+                </div>
+
+                {showVideoReward[ad._id] && (
+                  <VideoRewardAnimation
+                    amount={10}
+                    onComplete={() => handleVideoRewardComplete(ad._id)}
+                  />
+                )}
+
+                {/* Swipe detection overlay - only for videos */}
+                {(ad.creativeType.toLowerCase() === "video" ||
+                  ad.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
+                  ad.creativeURL.includes("youtube.com") ||
+                  ad.creativeURL.includes("youtu.be")) && (
+                  <div className="absolute inset-0 z-[5]">
+                    {/* Top swipe area - to go to previous slide */}
+                    <div
+                      className="absolute top-0 left-0 right-0 h-[20%]"
+                      onTouchStart={(e) => {
+                        // Mark this as a swipe attempt
+                        (e.currentTarget as any).swiping = true;
+                        (e.currentTarget as any).startY = e.touches[0].clientY;
+                      }}
+                      onTouchMove={(e) => {
+                        if ((e.currentTarget as any).swiping) {
+                          // Calculate direction
+                          const touch = e.touches[0];
+                          const startY =
+                            (e.currentTarget as any).startY || touch.clientY;
+                          const deltaY = touch.clientY - startY;
+
+                          if (deltaY > 50) {
+                            // Swipe down - go to previous
+                            if (swiperRef.current) {
+                              swiperRef.current.slidePrev();
+                              (e.currentTarget as any).swiping = false;
+                            }
+                          }
                         }
-                        // For images and HTML, allow the click to pass through
+                      }}
+                      onTouchEnd={(e) => {
+                        (e.currentTarget as any).swiping = false;
+                      }}
+                    />
+
+                    {/* Bottom swipe area - to go to next slide */}
+                    <div
+                      className="absolute bottom-0 left-0 right-0 h-[20%]"
+                      onTouchStart={(e) => {
+                        // Mark this as a swipe attempt
+                        (e.currentTarget as any).swiping = true;
+                        (e.currentTarget as any).startY = e.touches[0].clientY;
+                      }}
+                      onTouchMove={(e) => {
+                        if ((e.currentTarget as any).swiping) {
+                          // Calculate direction
+                          const touch = e.touches[0];
+                          const startY =
+                            (e.currentTarget as any).startY || touch.clientY;
+                          const deltaY = touch.clientY - startY;
+
+                          if (deltaY < -50) {
+                            // Swipe up - go to next
+                            if (swiperRef.current) {
+                              swiperRef.current.slideNext();
+                              (e.currentTarget as any).swiping = false;
+                            }
+                          }
+                        }
+                      }}
+                      onTouchEnd={(e) => {
+                        (e.currentTarget as any).swiping = false;
                       }}
                     />
                   </div>
-                </div>
-
-                {/* Ad Info */}
-                <div className="absolute bottom-10 left-4 z-20 p-2 rounded-lg">
-                  <h3 className="text-white font-bold text-xl">{ad.adsName}</h3>
-                </div>
-                
-                {/* No continue button needed since HTML is treated as static image */}
-
-                {/* Welcome Message */}
-                {/* <div className="absolute bottom-[33%] left-4 z-20">
-                  <WelcomeMessage />
-                </div> */}
-
-                {/* Action Buttons */}
-                <div className="absolute bottom-[33%] right-4 flex flex-col space-y-2 z-20">
-                  <ClaimButton
-                    disabled={!completedAds[ad._id]}
-                    imageNumber={parseInt(ad._id.substring(0, 2), 16) || 1}
-                  />
-                  <FavouriteButton />
-                  <ReturnButton onReturn={() => {}} />
-                </div>
-
-                {/* No swipe indicators as per user request */}
+                )}
               </div>
+
+              <div className="absolute bottom-10 left-4 z-20 p-2 rounded-lg">
+                <h3 className="text-white font-bold text-xl">{ad.adsName}</h3>
+              </div>
+
+              <AdActionButtons adId={ad._id} completed={completedAds[ad._id]} />
             </SwiperSlide>
           ))}
         </Swiper>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import UserAvatar from "./UserAvatar";
 import WorldIDComponent from "./WorldIDComponent";
@@ -13,7 +13,9 @@ import { MiniKit } from "@worldcoin/minikit-js";
 
 export default function DataCenterScreen() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("data");
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") || "data";
+  const [activeTab, setActiveTab] = useState(initialTab.toLowerCase());
   const [walletAddress, setWalletAddress] = useState("");
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export default function DataCenterScreen() {
       {/* Header */}
       <header className="p-4 flex items-center">
         <button
-          onClick={() => router.back()}
+          onClick={() => router.replace('/ads')}
           className="text-white hover:opacity-80 transition-opacity"
         >
           <ArrowLeft className="w-6 h-6" />
@@ -45,11 +47,14 @@ export default function DataCenterScreen() {
         <WorldIDComponent />
 
         {/* Tabs */}
-        <div className="flex gap-4 mt-8 mb-12 relative">
+        <div className="flex gap-4 mt-8 mb-4 relative">
           {["Data", "Balance", "Profile"].map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab.toLowerCase())}
+              onClick={() => {
+                setActiveTab(tab.toLowerCase());
+                router.push(`?tab=${tab.toLowerCase()}`);
+              }}
               className={`px-6 py-2 rounded-full font-semibold transition-all
                 ${
                   activeTab === tab.toLowerCase()
@@ -60,11 +65,6 @@ export default function DataCenterScreen() {
               {tab}
             </button>
           ))}
-
-          <div className="absolute top-[50px] -translate-x-1/2 left-1/2">
-            Wallet Address:{" "}
-            <span className="font-semibold truncate">{walletAddress}</span>
-          </div>
         </div>
 
         {/* Tab Content */}
