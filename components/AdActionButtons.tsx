@@ -15,21 +15,18 @@ const AdActionButtons: React.FC<Props> = ({ adId, completed = false }) => {
   const favouriteButtonRef = useRef<SVGSVGElement>(null);
   const router = useRouter();
 
-  // 处理收藏按钮点击
   const handleFavouriteClick = () => {
-    // 如果当前未收藏，点击收藏时触发撒花特效
     if (!isFavourited) {
-      // 在屏幕中间爆开，不传递元素引用
+
       triggerConfetti(undefined, {
         particleCount: 100,
         spread: 360,
         startVelocity: 25,
         duration: 1000,
-        zIndex: 9999  // 设置非常高的 z-index 确保在最上层
+        zIndex: 9999  
       });
     }
     
-    // 切换收藏状态
     setIsFavourited(!isFavourited);
   };
 
@@ -52,7 +49,7 @@ const AdActionButtons: React.FC<Props> = ({ adId, completed = false }) => {
         viewBox="0 0 43 43"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className={`cursor-pointer transition-opacity duration-200 ${isFavourited ? 'opacity-100' : 'opacity-50'}`}
+        className={`cursor-pointer transition-opacity duration-200 ${isFavourited ? 'opacity-100' : 'opacity-30'}`}
         onClick={handleFavouriteClick}
         onMouseEnter={() => setActiveButton('favorite')}
         onMouseLeave={() => setActiveButton(null)}
@@ -72,7 +69,7 @@ const AdActionButtons: React.FC<Props> = ({ adId, completed = false }) => {
         p-id="8586"
          width="30"
         height="30"
-        className={`cursor-pointer transition-opacity duration-200 ${activeButton === 'comment' ? 'opacity-100' : 'opacity-50'}`}
+        className={`cursor-pointer transition-opacity duration-200 ${activeButton === 'comment' ? 'opacity-100' : 'opacity-30'}`}
         onMouseEnter={() => setActiveButton('comment')}
         onMouseLeave={() => setActiveButton(null)}
       >
@@ -90,7 +87,7 @@ const AdActionButtons: React.FC<Props> = ({ adId, completed = false }) => {
         p-id="10474"
         width="30"
         height="30"
-        className={`cursor-pointer transition-opacity duration-200 ${activeButton === 'share' ? 'opacity-100' : 'opacity-50'}`}
+        className={`cursor-pointer transition-opacity duration-200 ${activeButton === 'share' ? 'opacity-100' : 'opacity-30'}`}
         onMouseEnter={() => setActiveButton('share')}
         onMouseLeave={() => setActiveButton(null)}
       >

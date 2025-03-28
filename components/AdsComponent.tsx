@@ -45,7 +45,6 @@ export default function AdsComponent() {
     document.querySelectorAll("video").forEach((video) => {
       try {
         video.pause();
-        // 确保视频真的暂停了
         if (!video.paused) {
           video.pause();
         }
@@ -82,18 +81,15 @@ export default function AdsComponent() {
 
     // Pause all other videos first to ensure only one plays at a time
     const pauseAllVideos = () => {
-      // 保存当前视频ID
       const currentVideoId = currentVideoRef.current;
       
       // Find all video elements and pause them
       const videoElements = document.querySelectorAll("video");
       videoElements.forEach((video) => {
         try {
-          // 检查是否是当前视频所在容器
           const container = video.closest('[data-ad-id]');
           const adId = container?.getAttribute('data-ad-id');
           
-          // 如果不是当前视频，则暂停
           if (adId !== currentVideoId) {
             video.pause();
             console.log(`Paused HTML5 video for ad: ${adId}`);
@@ -109,11 +105,9 @@ export default function AdsComponent() {
       );
       youtubeIframes.forEach((iframe) => {
         try {
-          // 检查是否是当前视频所在容器
           const container = iframe.closest('[data-ad-id]');
           const adId = container?.getAttribute('data-ad-id');
           
-          // 如果不是当前视频，则暂停
           if (adId !== currentVideoId) {
             // Try to access the contentWindow to send a postMessage
             const contentWindow = (iframe as HTMLIFrameElement).contentWindow;
@@ -130,8 +124,6 @@ export default function AdsComponent() {
         }
       });
       
-      // 不要清除当前视频引用，这样会导致自动连播失效
-      // currentVideoRef.current = null;
     };
 
     // Pause all videos first
@@ -459,13 +451,10 @@ export default function AdsComponent() {
     const newIndex = swiper.activeIndex;
     setActiveIndex(newIndex);
     
-    // 获取当前广告和前一个广告
     const currentAd = ads[newIndex];
     const previousIndex = swiper.previousIndex;
     const previousAd = ads[previousIndex];
     
-    // 记录滑动切换日志
-    console.log(`Slide changed from ${previousIndex} to ${newIndex}`);
     if (previousAd) {
       console.log(`Previous ad: ${previousAd.adsName}, type: ${previousAd.creativeType}`);
     }
@@ -473,7 +462,6 @@ export default function AdsComponent() {
       console.log(`Current ad: ${currentAd.adsName}, type: ${currentAd.creativeType}`);
     }
     
-    // 检查当前广告是否是视频
     const isCurrentVideo = currentAd && (
       currentAd.creativeType.toLowerCase() === "video" ||
       currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
@@ -481,29 +469,24 @@ export default function AdsComponent() {
       currentAd.creativeURL.includes("youtu.be")
     );
     
-    // 如果当前广告是视频，设置为当前视频引用
     if (isCurrentVideo) {
       currentVideoRef.current = currentAd._id;
       console.log(`Set current video to: ${currentAd.adsName}`);
     }
     
-    // 强制暂停所有视频，确保没有视频在后台播放
     pauseAllVideos();
     
-    // 额外检查：如果前一个广告是视频，确保它被暂停
     if (previousAd && (
       previousAd.creativeType.toLowerCase() === "video" ||
       previousAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
       previousAd.creativeURL.includes("youtube.com") ||
       previousAd.creativeURL.includes("youtu.be")
     )) {
-      // 查找前一个广告的容器和视频元素
       const prevAdContainer = document.querySelector(
         `[data-ad-id="${previousAd._id}"]`
       );
       
       if (prevAdContainer) {
-        // 暂停 HTML5 视频
         const video = prevAdContainer.querySelector("video");
         if (video) {
           try {
@@ -514,7 +497,6 @@ export default function AdsComponent() {
           }
         }
         
-        // 暂停 YouTube 视频
         const iframe = prevAdContainer.querySelector("iframe");
         if (iframe && (
           previousAd.creativeURL.includes("youtube.com") || 

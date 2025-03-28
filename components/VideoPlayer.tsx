@@ -170,25 +170,23 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     video.addEventListener("timeupdate", updateProgress);
     video.addEventListener("durationchange", updateProgress);
     video.addEventListener("ended", () => {
-      // 视频结束时触发奖励动画回调
+
       if (onVideoEnd) {
         console.log("HTML5 video ended, triggering reward animation");
         onVideoEnd();
       }
       
-      // 暂停视频，等待奖励动画显示完成
       video.pause();
       setIsPlaying(false);
       
-      // 在奖励动画结束后（约3秒）重新开始播放视频
       setTimeout(() => {
         console.log("Reward animation complete, restarting video");
-        video.currentTime = 0; // 重置视频到开始位置
+        video.currentTime = 0;
         video.play().catch(error => {
           console.warn("Auto-replay failed:", error);
         });
         setIsPlaying(true);
-      }, 3500); // 设置稍长于奖励动画的时间（3秒）
+      }, 3500); 
     });
 
     return () => {
@@ -204,29 +202,27 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const onPlayerStateChange = (event: any) => {
     // YouTube player states: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (video cued)
     if (event.data === 0) {
-      // 视频结束时触发奖励动画回调
+
       console.log("YouTube video ended, triggering reward animation");
       if (onVideoEnd) {
         onVideoEnd();
       }
       
-      // 暂停视频，等待奖励动画显示完成
       if (youtubePlayer && typeof youtubePlayer.pauseVideo === "function") {
         youtubePlayer.pauseVideo();
       }
       setIsPlaying(false);
       
-      // 在奖励动画结束后（约3秒）重新开始播放视频
       setTimeout(() => {
         console.log("Reward animation complete, restarting YouTube video");
         if (youtubePlayer && typeof youtubePlayer.seekTo === "function") {
-          youtubePlayer.seekTo(0, true); // 重置视频到开始位置
+          youtubePlayer.seekTo(0, true); 
         }
         if (youtubePlayer && typeof youtubePlayer.playVideo === "function") {
           youtubePlayer.playVideo();
         }
         setIsPlaying(true);
-      }, 3500); // 设置稍长于奖励动画的时间（3秒）
+      }, 3500); 
     } else if (event.data === 1) {
       // Video playing
       setIsPlaying(true);
@@ -324,28 +320,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const dragPercentage = (dragPosition / rect.width) * 100;
     
     setProgress(dragPercentage);
-  };
-
-  const handleProgressDragEnd = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!allowProgressControl || !isDragging) return;
-    
-    const progressBar = progressBarRef.current;
-    if (!progressBar) return;
-
-    const rect = progressBar.getBoundingClientRect();
-    const dragPosition = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-    const dragPercentage = (dragPosition / rect.width) * 100;
-    const seekTime = (dragPercentage / 100) * duration;
-
-    if (isYouTube) {
-      if (youtubePlayer && typeof youtubePlayer.seekTo === "function") {
-        youtubePlayer.seekTo(seekTime, true);
-      }
-    } else if (videoRef.current) {
-      videoRef.current.currentTime = seekTime;
-    }
-
-    setIsDragging(false);
   };
 
   // Add global mouse move and up handlers for dragging
