@@ -45,14 +45,55 @@ export default function DataTab() {
   // 获取广告缩略图的函数
   const getAdThumbnail = (ad: Ad) => {
     const type = ad.creativeType.toLowerCase();
+    const url = ad.creativeURL;
 
-    if (type === "video") {
-      return ad.thumbnailURL || "/images/video-thumbnail.png";
-    } else if (type === "html") {
-      return ad.thumbnailURL || "/images/html-thumbnail.png";
-    } else {
-      // 图片类型
-      return ad.thumbnailURL || ad.creativeURL || "/images/image-thumbnail.png";
+    // 处理视频类型广告
+    if (type === "video" || url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes("youtube.com") || url.includes("youtu.be")) {
+      // 处理 YouTube 视频，提取视频 ID 并生成缩略图 URL
+      if (url.includes("youtube.com") || url.includes("youtu.be")) {
+        let videoId = "";
+        
+        // 从 youtube.com/watch?v=VIDEO_ID 格式提取
+        if (url.includes("youtube.com/watch")) {
+          const urlObj = new URL(url);
+          videoId = urlObj.searchParams.get("v") || "";
+        } 
+        // 从 youtube.com/shorts/VIDEO_ID 格式提取
+        else if (url.includes("youtube.com/shorts/")) {
+          const shortsPath = url.split("youtube.com/shorts/")[1];
+          videoId = shortsPath.split("?")[0]; // 移除可能的查询参数
+        }
+        // 从 youtu.be/VIDEO_ID 格式提取
+        else if (url.includes("youtu.be")) {
+          const parts = url.split("/");
+          videoId = parts[parts.length - 1].split("?")[0];
+        }
+        
+        if (videoId) {
+          // 使用高质量的 YouTube 缩略图
+          return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        }
+      }
+      
+      // 如果无法提取 YouTube 缩略图，使用默认视频缩略图
+      return "/images/video-thumbnail.png";
+    } 
+    // 处理 HTML 类型广告
+    else if (type === "html") {
+      // 对于 HTML 内容，可以考虑使用网站的 favicon 或截图服务
+      // 这里使用一个简单的方法：从 URL 中提取域名，并使用 Google 的 favicon 服务
+      try {
+        const domain = new URL(url).hostname;
+        return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+      } catch (e) {
+        // 如果 URL 解析失败，使用默认 HTML 缩略图
+        return "/images/html-thumbnail.png";
+      }
+    } 
+    // 处理图片类型广告
+    else {
+      // 对于图片类型，直接使用创意 URL 作为缩略图
+      return ad.creativeURL || "/images/image-thumbnail.png";
     }
   };
 
