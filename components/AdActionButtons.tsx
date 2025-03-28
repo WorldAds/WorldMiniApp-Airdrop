@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
+import { triggerConfetti } from "@/utils/confetti";
 
 interface Props {
   adId: string;
@@ -9,9 +10,27 @@ import profileIcon from "../public/icons/profile.png";
 import { useRouter } from "next/navigation";
 
 const AdActionButtons: React.FC<Props> = ({ adId, completed = false }) => {
-  const [userAvatar, setUserAvatar] = useState("");
   const [isFavourited, setIsFavourited] = useState(false);
+  const favouriteButtonRef = useRef<SVGSVGElement>(null);
   const router = useRouter();
+
+  // 处理收藏按钮点击
+  const handleFavouriteClick = () => {
+    // 如果当前未收藏，点击收藏时触发撒花特效
+    if (!isFavourited) {
+      // 在屏幕中间爆开，不传递元素引用
+      triggerConfetti(undefined, {
+        particleCount: 100,
+        spread: 360,
+        startVelocity: 25,
+        duration: 1000,
+        zIndex: 9999  // 设置非常高的 z-index 确保在最上层
+      });
+    }
+    
+    // 切换收藏状态
+    setIsFavourited(!isFavourited);
+  };
 
   return (
     <div className="absolute bottom-[6%] right-4 flex flex-col space-y-5 z-20 items-end">
@@ -26,13 +45,14 @@ const AdActionButtons: React.FC<Props> = ({ adId, completed = false }) => {
       </div>
 
       <svg
+        ref={favouriteButtonRef}
         width="43"
         height="43"
         viewBox="0 0 43 43"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className="cursor-pointer"
-        onClick={() => setIsFavourited(!isFavourited)}
+        onClick={handleFavouriteClick}
       >
         <g transform="scale(1.79167)">
           <path
