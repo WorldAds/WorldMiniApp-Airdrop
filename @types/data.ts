@@ -9,4 +9,13 @@ export interface Ad {
     creativeURL: string;
     _id: string; // MongoDB ID from the API
     description?: string
-  }
+}
+
+export interface AdRewardParams {
+  adId: string;
+  userId: string;
+  rewardedAmount: number;
+  createdAt: string;
+  chainId: string;
+  txHash: string;
+}

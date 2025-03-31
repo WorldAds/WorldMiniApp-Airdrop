@@ -1,28 +1,32 @@
-"use client";
-
 import React, {
   useState,
   useEffect,
   Suspense,
   useRef,
   useCallback,
+  useMemo,
 } from "react";
-import Footer from "./Footer";
-import AdActionButtons from "./AdActionButtons";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Mousewheel, Keyboard } from "swiper/modules";
-import type { Swiper as SwiperType } from "swiper";
+import { Swiper as SwiperType } from "swiper";
 import "swiper/css";
+import "swiper/css/effect-cards";
 import "swiper/css/mousewheel";
 import "swiper/css/keyboard";
-import { getAdsList } from "@/app/api/service";
+import { EffectCards, Mousewheel, Keyboard } from "swiper/modules";
 import VideoPlayer from "./VideoPlayer";
+import AdActionButtons from "./AdActionButtons";
 import HTMLContent from "./HTMLContent";
 import Image from "next/image";
-import { Ad } from "@/@types/data";
+import { Ad, AdRewardParams } from "@/@types/data";
 import VideoRewardAnimation from "./VideoRewardAnimation";
 import HtmlRewardAnimation from "./HtmlRewardAnimation";
 import ImageRewardAnimation from "./ImageRewardAnimation";
+import { getAdsList, getAdsReward, postAdReward } from "@/app/api/service";
+import { MiniKit } from "@worldcoin/minikit-js";
+import { ERC20_ABI } from "../app/api/erc20";
+import Footer from "./Footer";
+
+const userID = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
 
 export default function AdsComponent() {
   const [ads, setAds] = useState<Ad[]>([]);
@@ -34,12 +38,176 @@ export default function AdsComponent() {
   const [showHtmlReward, setShowHtmlReward] = useState<Record<string, boolean>>({});
   const [showImageReward, setShowImageReward] = useState<Record<string, boolean>>({});
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const [viewStartTime, setViewStartTime] = useState<Record<string, number>>(
-    {}
-  );
+  const [viewStartTime, setViewStartTime] = useState<Record<string, number>>({});
   const currentVideoRef = useRef<string | null>(null);
+  const [userRewards, setUserRewards] = useState<string[]>([]);
+  const [txStatus, setTxStatus] = useState<Record<string, string>>({});
 
-  // Function to pause all videos
+  // 获取广告列表
+  useEffect(() => {
+    const fetchAds = async () => {
+      try {
+        const data = await getAdsList();
+        setAds(data);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching ads:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchAds();
+  }, []);
+
+  // 获取用户已获得的广告奖励记录
+  useEffect(() => {
+    const fetchUserRewards = async () => {
+      try {
+        const data = await getAdsReward(userID);
+        // 假设 API 返回的是包含 adId 的数组
+        if (data && Array.isArray(data)) {
+          // 提取所有广告 ID
+          const adIds = data.map((reward: any) => reward.adId);
+          setUserRewards(adIds);
+        }
+      } catch (error) {
+        console.error("Error fetching user rewards:", error);
+      }
+    };
+
+    fetchUserRewards();
+  }, []);
+
+  // 处理广告内容完成
+  const handleContentComplete = useCallback(async (adId: string) => {
+    // 检查该广告是否已经获得过奖励
+    if (userRewards.includes(adId)) {
+      console.log(`Ad ${adId} already rewarded, skipping reward`);
+      return;
+    }
+
+    // 标记广告为已完成
+    setCompletedAds((prev) => {
+      if (prev[adId]) return prev;
+      return { ...prev, [adId]: true };
+    });
+
+    // 获取当前广告
+    const currentAd = ads.find((ad) => ad._id === adId);
+    if (!currentAd) return;
+
+    // 记录广告完成
+    console.log(`Ad completed: ${currentAd.adsName}`);
+
+    try {
+      // 发送交易
+      await sendRewardTransaction(adId);
+      
+      // 根据广告类型设置奖励动画
+      if (
+        currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
+        currentAd.creativeURL.includes("youtube.com") ||
+        currentAd.creativeURL.includes("youtu.be")
+      ) {
+        // 视频奖励
+        setShowVideoReward((prev) => ({ ...prev, [adId]: true }));
+      } else if (currentAd.creativeType.toLowerCase() === "html") {
+        // HTML 奖励
+        setShowHtmlReward((prev) => ({ ...prev, [adId]: true }));
+      } else if (
+        currentAd.creativeType.toLowerCase() === "image" ||
+        currentAd.creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+      ) {
+        // 图片奖励
+        setShowImageReward((prev) => ({ ...prev, [adId]: true }));
+      }
+    } catch (error) {
+      console.error("Error sending reward transaction:", error);
+      // 交易失败时不显示奖励动画
+    }
+  }, [ads, userRewards]);
+
+  // 发送奖励交易
+  const sendRewardTransaction = async (adId: string) => {
+    if (!MiniKit.isInstalled()) {
+      console.log("MiniKit not installed. Are you in the World App?");
+      throw new Error("MiniKit not installed");
+    }
+
+    // 获取用户地址
+    const userAddress = MiniKit.walletAddress || userID;
+    if (!userAddress) {
+      console.log("No wallet address found");
+      throw new Error("No wallet address found");
+    }
+
+    try {
+      setTxStatus((prev) => ({ ...prev, [adId]: "pending" }));
+
+      // 模拟奖励金额 (10 tokens with 18 decimals)
+      const rewardAmount = "10000000000000000000";
+      
+      // 发送交易
+      const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
+        transaction: [
+          {
+            // ERC-20 合约地址
+            address: "0x0C964958A0a6bA84706b2C0C6547BDD24cb572Ac",
+            abi: ERC20_ABI,
+            functionName: "transfer",
+            args: [userAddress, rewardAmount],
+          },
+        ],
+      });
+
+      if (finalPayload.status === "error") {
+        setTxStatus((prev) => ({ 
+          ...prev, 
+          [adId]: "error: " + JSON.stringify(finalPayload) 
+        }));
+        throw new Error("Transaction error");
+      } else {
+        // 交易成功
+        setTxStatus((prev) => ({ 
+          ...prev, 
+          [adId]: "success: " + finalPayload.transaction_id 
+        }));
+        
+        // 更新用户奖励记录
+        setUserRewards((prev) => [...prev, adId]);
+        
+        // 调用 API 更新奖励状态
+        const rewardParams: AdRewardParams = {
+          adId,
+          userId: userAddress,
+          rewardedAmount: 10, // 模拟奖励金额
+          createdAt: new Date().toISOString(),
+          chainId: "5", // Goerli testnet
+          txHash: finalPayload.transaction_id,
+        };
+        
+        await postAdReward(rewardParams);
+        return finalPayload.transaction_id;
+      }
+    } catch (err: any) {
+      console.error("Transaction error:", err);
+      setTxStatus((prev) => ({ 
+        ...prev, 
+        [adId]: "error: " + (err.message || String(err)) 
+      }));
+      throw err;
+    }
+  };
+
+  const handleRewardComplete = useCallback((adId: string) => {
+    setShowHtmlReward((prev) => ({ ...prev, [adId]: false }));
+    setShowImageReward((prev) => ({ ...prev, [adId]: false }));
+  }, []);
+
+  const handleVideoRewardComplete = useCallback((adId: string) => {
+    setShowVideoReward((prev) => ({ ...prev, [adId]: false }));
+  }, []);
+
   const pauseAllVideos = useCallback(() => {
     // Pause all HTML5 videos
     document.querySelectorAll("video").forEach((video) => {
@@ -75,7 +243,6 @@ export default function AdsComponent() {
     console.log("Cleared current video reference");
   }, []);
 
-  // Update the autoPlayCurrentVideo function to be more reliable
   const autoPlayCurrentVideo = useCallback(() => {
     if (!currentVideoRef.current) return;
 
@@ -231,48 +398,124 @@ export default function AdsComponent() {
     }, 500);
   }, [ads]);
 
-  const handleContentComplete = useCallback((adId: string) => {
-    // Mark the ad as completed
-    setCompletedAds((prev) => {
-      if (prev[adId]) return prev;
-      return { ...prev, [adId]: true };
-    });
-
+  const handleSlideChange = (swiper: SwiperType) => {
+    const newIndex = swiper.activeIndex;
+    setActiveIndex(newIndex);
+    
+    const currentAd = ads[newIndex];
+    const previousIndex = swiper.previousIndex;
+    const previousAd = ads[previousIndex];
+    
+    if (previousAd) {
+      console.log(`Previous ad: ${previousAd.adsName}, type: ${previousAd.creativeType}`);
+    }
+    if (currentAd) {
+      console.log(`Current ad: ${currentAd.adsName}, type: ${currentAd.creativeType}`);
+    }
+    
+    const isCurrentVideo = currentAd && (
+      currentAd.creativeType.toLowerCase() === "video" ||
+      currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
+      currentAd.creativeURL.includes("youtube.com") ||
+      currentAd.creativeURL.includes("youtu.be")
+    );
+    
+    if (isCurrentVideo) {
+      currentVideoRef.current = currentAd._id;
+      console.log(`Set current video to: ${currentAd.adsName}`);
+    }
+    
+    pauseAllVideos();
+    
+    if (previousAd && (
+      previousAd.creativeType.toLowerCase() === "video" ||
+      previousAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
+      previousAd.creativeURL.includes("youtube.com") ||
+      previousAd.creativeURL.includes("youtu.be")
+    )) {
+      const prevAdContainer = document.querySelector(
+        `[data-ad-id="${previousAd._id}"]`
+      );
+      
+      if (prevAdContainer) {
+        const video = prevAdContainer.querySelector("video");
+        if (video) {
+          try {
+            video.pause();
+            console.log(`Explicitly paused previous video: ${previousAd.adsName}`);
+          } catch (e) {
+            console.error("Error pausing previous video:", e);
+          }
+        }
+        
+        const iframe = prevAdContainer.querySelector("iframe");
+        if (iframe && (
+          previousAd.creativeURL.includes("youtube.com") || 
+          previousAd.creativeURL.includes("youtu.be")
+        )) {
+          try {
+            const contentWindow = (iframe as HTMLIFrameElement).contentWindow;
+            if (contentWindow) {
+              contentWindow.postMessage(
+                '{"event":"command","func":"pauseVideo","args":""}',
+                "*"
+              );
+              console.log(`Explicitly paused previous YouTube video: ${previousAd.adsName}`);
+            }
+          } catch (e) {
+            console.error("Error pausing previous YouTube video:", e);
+          }
+        }
+      }
+    }
+    
+    // Clear any existing timer
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    
     // Get the current ad
-    const currentAd = ads.find((ad) => ad._id === adId);
     if (!currentAd) return;
-
-    // Log the completion
-    console.log(`Ad completed: ${currentAd.adsName}`);
-
-    // Set reward based on ad type
-    if (
+    
+    // Set the view start time for the current ad
+    setViewStartTime((prev) => ({ ...prev, [currentAd._id]: Date.now() }));
+    
+    // For HTML ads, set a timer to mark as completed after 10 seconds
+    if (currentAd.creativeType.toLowerCase() === "html") {
+      console.log(`Setting 10 second timer for HTML ad: ${currentAd.adsName}`);
+      timerRef.current = setTimeout(() => {
+        console.log(`HTML ad viewed for 10 seconds: ${currentAd.adsName}`);
+        handleContentComplete(currentAd._id);
+      }, 10000);
+    } 
+    // For Image ads, set a timer to mark as completed after 5 seconds
+    else if (
+      currentAd.creativeType.toLowerCase() === "image" ||
+      currentAd.creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+    ) {
+      console.log(`Setting 5 second timer for Image ad: ${currentAd.adsName}`);
+      timerRef.current = setTimeout(() => {
+        console.log(`Image ad viewed for 5 seconds: ${currentAd.adsName}`);
+        handleContentComplete(currentAd._id);
+      }, 5000);
+    }
+    // For video ads, set the current video reference and auto-play
+    else if (
+      currentAd.creativeType.toLowerCase() === "video" ||
       currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
       currentAd.creativeURL.includes("youtube.com") ||
       currentAd.creativeURL.includes("youtu.be")
     ) {
-      // Video reward
-      setShowVideoReward((prev) => ({ ...prev, [adId]: true }));
-    } else if (currentAd.creativeType.toLowerCase() === "html") {
-      // HTML reward
-      setShowHtmlReward((prev) => ({ ...prev, [adId]: true }));
-    } else if (
-      currentAd.creativeType.toLowerCase() === "image" ||
-      currentAd.creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)
-    ) {
-      // Image reward
-      setShowImageReward((prev) => ({ ...prev, [adId]: true }));
+      currentVideoRef.current = currentAd._id;
+      
+      // Add a slight delay to ensure components are mounted
+      setTimeout(() => {
+        console.log("Auto-playing video for slide change:", currentAd.adsName);
+        autoPlayCurrentVideo();
+      }, 300);
     }
-  }, [ads]);
-
-  const handleRewardComplete = useCallback((adId: string) => {
-    setShowHtmlReward((prev) => ({ ...prev, [adId]: false }));
-    setShowImageReward((prev) => ({ ...prev, [adId]: false }));
-  }, []);
-
-  const handleVideoRewardComplete = useCallback((adId: string) => {
-    setShowVideoReward((prev) => ({ ...prev, [adId]: false }));
-  }, []);
+  };
 
   const renderAdContent = (ad: Ad) => {
     switch (ad.creativeType.toLowerCase()) {
@@ -446,143 +689,6 @@ export default function AdsComponent() {
       };
     }
   }, [ads, loading, autoPlayCurrentVideo, handleContentComplete]);
-
-  const handleSlideChange = (swiper: SwiperType) => {
-    const newIndex = swiper.activeIndex;
-    setActiveIndex(newIndex);
-    
-    const currentAd = ads[newIndex];
-    const previousIndex = swiper.previousIndex;
-    const previousAd = ads[previousIndex];
-    
-    if (previousAd) {
-      console.log(`Previous ad: ${previousAd.adsName}, type: ${previousAd.creativeType}`);
-    }
-    if (currentAd) {
-      console.log(`Current ad: ${currentAd.adsName}, type: ${currentAd.creativeType}`);
-    }
-    
-    const isCurrentVideo = currentAd && (
-      currentAd.creativeType.toLowerCase() === "video" ||
-      currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
-      currentAd.creativeURL.includes("youtube.com") ||
-      currentAd.creativeURL.includes("youtu.be")
-    );
-    
-    if (isCurrentVideo) {
-      currentVideoRef.current = currentAd._id;
-      console.log(`Set current video to: ${currentAd.adsName}`);
-    }
-    
-    pauseAllVideos();
-    
-    if (previousAd && (
-      previousAd.creativeType.toLowerCase() === "video" ||
-      previousAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
-      previousAd.creativeURL.includes("youtube.com") ||
-      previousAd.creativeURL.includes("youtu.be")
-    )) {
-      const prevAdContainer = document.querySelector(
-        `[data-ad-id="${previousAd._id}"]`
-      );
-      
-      if (prevAdContainer) {
-        const video = prevAdContainer.querySelector("video");
-        if (video) {
-          try {
-            video.pause();
-            console.log(`Explicitly paused previous video: ${previousAd.adsName}`);
-          } catch (e) {
-            console.error("Error pausing previous video:", e);
-          }
-        }
-        
-        const iframe = prevAdContainer.querySelector("iframe");
-        if (iframe && (
-          previousAd.creativeURL.includes("youtube.com") || 
-          previousAd.creativeURL.includes("youtu.be")
-        )) {
-          try {
-            const contentWindow = (iframe as HTMLIFrameElement).contentWindow;
-            if (contentWindow) {
-              contentWindow.postMessage(
-                '{"event":"command","func":"pauseVideo","args":""}',
-                "*"
-              );
-              console.log(`Explicitly paused previous YouTube video: ${previousAd.adsName}`);
-            }
-          } catch (e) {
-            console.error("Error pausing previous YouTube video:", e);
-          }
-        }
-      }
-    }
-    
-    // Clear any existing timer
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    
-    // Get the current ad
-    if (!currentAd) return;
-    
-    // Set the view start time for the current ad
-    setViewStartTime((prev) => ({ ...prev, [currentAd._id]: Date.now() }));
-    
-    // For HTML ads, set a timer to mark as completed after 10 seconds
-    if (currentAd.creativeType.toLowerCase() === "html") {
-      console.log(`Setting 10 second timer for HTML ad: ${currentAd.adsName}`);
-      timerRef.current = setTimeout(() => {
-        console.log(`HTML ad viewed for 10 seconds: ${currentAd.adsName}`);
-        handleContentComplete(currentAd._id);
-      }, 10000);
-    } 
-    // For Image ads, set a timer to mark as completed after 5 seconds
-    else if (
-      currentAd.creativeType.toLowerCase() === "image" ||
-      currentAd.creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)
-    ) {
-      console.log(`Setting 5 second timer for Image ad: ${currentAd.adsName}`);
-      timerRef.current = setTimeout(() => {
-        console.log(`Image ad viewed for 5 seconds: ${currentAd.adsName}`);
-        handleContentComplete(currentAd._id);
-      }, 5000);
-    }
-    // For video ads, set the current video reference and auto-play
-    else if (
-      currentAd.creativeType.toLowerCase() === "video" ||
-      currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
-      currentAd.creativeURL.includes("youtube.com") ||
-      currentAd.creativeURL.includes("youtu.be")
-    ) {
-      currentVideoRef.current = currentAd._id;
-      
-      // Add a slight delay to ensure components are mounted
-      setTimeout(() => {
-        console.log("Auto-playing video for slide change:", currentAd.adsName);
-        autoPlayCurrentVideo();
-      }, 300);
-    }
-  };
-
-  useEffect(() => {
-    const fetchAds = async () => {
-      try {
-        setLoading(true);
-        const adsData = await getAdsList();
-        console.log("Fetched ads:", adsData);
-
-        setAds(adsData);
-      } catch (error) {
-        console.error("Failed to load ads:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAds();
-  }, []);
 
   if (loading) {
     return (

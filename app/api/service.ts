@@ -1,3 +1,4 @@
+import { AdRewardParams } from '@/@types/data';
 import axios from 'axios';
 
 axios.defaults.withCredentials = false;
@@ -40,3 +41,24 @@ export const getAdsList = async () => {
   }
 };
 
+export const postAdReward = async (params: AdRewardParams) => {
+  try {
+    const response = await apiClient.post('/api/v1/rewards', {
+      params,
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching advertisements:', error);
+    throw error;
+  }
+};
+
+export const getAdsReward = async (id:string) => {
+  try {
+    const response = await apiClient.get(`/api/v1/rewards/user/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching advertisement by id:', error);
+    throw error;
+  }
+};
