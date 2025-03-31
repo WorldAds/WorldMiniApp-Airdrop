@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef } from "react";
 // Define global YouTube API types
 declare global {
   interface Window {
-    YT?: any;
+    YT?: YT;
     onYouTubeIframeAPIReady?: () => void;
   }
 }
