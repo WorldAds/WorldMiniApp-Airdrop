@@ -19,7 +19,7 @@ export default function WalletAuthScreen() {
   // 2) Add the async walletAuth logic to this handler
   const handleVerifyWallet = async () => {
     try {
-      // Check if MiniKit is installed (i.e., you’re in the World App)
+      // Check if MiniKit is installed (i.e., you're in the World App)
       if (!MiniKit.isInstalled()) {
         alert("MiniKit not installed (are you in the World App?)");
         return;
