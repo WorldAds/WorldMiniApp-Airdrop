@@ -9,7 +9,7 @@ interface RewardAnimationProps {
   onComplete: () => void
 }
 
-// Define a type for the animation points
+// Define a type for the animation pointsn
 interface AnimationPoint {
   x: number;
   y: number;
