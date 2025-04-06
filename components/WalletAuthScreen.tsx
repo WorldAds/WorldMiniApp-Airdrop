@@ -3,6 +3,8 @@
 import { ArrowLeft, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +17,9 @@ import { MiniKit } from "@worldcoin/minikit-js";
 export default function WalletAuthScreen() {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { data: session } = useSession();
+  const { login } = useAuth();
 
   // 2) Add the async walletAuth logic to this handler
   const handleVerifyWallet = async () => {
@@ -62,7 +67,25 @@ export default function WalletAuthScreen() {
 
       const verifyData = await verifyRes.json();
       if (verifyData.status === "success") {
-        // Wallet is verified → show the success modal
+        // Wallet is verified, now login with our backend
+        if (session?.user?.id && MiniKit.walletAddress) {
+          setIsLoading(true);
+          try {
+            // Login with our backend
+            const userData = await login(session.user.id, MiniKit.walletAddress);
+            if (userData) {
+              console.log("Login successful:", userData);
+            } else {
+              console.warn("Login failed");
+            }
+          } catch (error) {
+            console.error("Login error:", error);
+          } finally {
+            setIsLoading(false);
+          }
+        }
+        
+        // Show the success modal
         setIsModalOpen(true);
       } else {
         console.warn("Signature invalid or other error:", verifyData);
@@ -116,7 +139,7 @@ export default function WalletAuthScreen() {
 
           {/* Verify Wallet Text */}
           <span className="font-inter font-semibold text-[20px] leading-[24px] tracking-[0.03em] bg-gradient-to-r from-[#AC54F1] to-[#EB489A] bg-clip-text text-transparent">
-            Verify Wallet
+            {isLoading ? "Loading..." : "Verify Wallet"}
           </span>
         </div>
       </main>

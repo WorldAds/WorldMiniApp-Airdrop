@@ -19,3 +19,15 @@ export interface AdRewardParams {
   chainId: string;
   txHash: string;
 }
+
+export interface CreateUserParams {
+worldId: string;
+nickname: string;
+walletAddress: string
+}
+
+export interface LoginUserParams {
+  worldId: string;
+  walletAddress: string
+}
+  

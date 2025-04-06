@@ -10,6 +10,8 @@ import BalanceTab from "./BalanceTab";
 import ProfileTab from "./ProfileTab";
 import Footer from "./Footer";
 import { MiniKit } from "@worldcoin/minikit-js";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSession } from "next-auth/react";
 
 export default function DataCenterScreen() {
   const router = useRouter();
@@ -17,9 +19,11 @@ export default function DataCenterScreen() {
   const initialTab = searchParams.get("tab") || "data";
   const [activeTab, setActiveTab] = useState(initialTab.toLowerCase());
   const [walletAddress, setWalletAddress] = useState("");
+  const { user, isAuthenticated, login } = useAuth();
+  const { data: session } = useSession();
 
   useEffect(() => {
-    // 3) If MiniKit is installed, retrieve the wallet address
+    // If MiniKit is installed, retrieve the wallet address
     if (MiniKit.isInstalled()) {
       const address = MiniKit.walletAddress; // This is set after a successful walletAuth
       if (address) {
@@ -27,6 +31,21 @@ export default function DataCenterScreen() {
       }
     }
   }, []);
+
+  // Try to login if we have session and wallet address but no user
+  useEffect(() => {
+    const attemptLogin = async () => {
+      if (!isAuthenticated && session?.user?.id && walletAddress) {
+        try {
+          await login(session.user.id, walletAddress);
+        } catch (error) {
+          console.error("Auto-login error:", error);
+        }
+      }
+    };
+
+    attemptLogin();
+  }, [isAuthenticated, session, walletAddress, login]);
 
   return (
     <div className="min-h-screen bg-[#1E1B2E] text-white pb-12">
@@ -71,7 +90,7 @@ export default function DataCenterScreen() {
         <div className="w-full">
           {activeTab === "data" && <DataTab />}
           {activeTab === "balance" && <BalanceTab />}
-          {activeTab === "profile" && <ProfileTab />}
+          {activeTab === "profile" && <ProfileTab user={user} />}
         </div>
       </main>
 
