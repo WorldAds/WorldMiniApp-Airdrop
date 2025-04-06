@@ -2,16 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function WorldIDComponent() {
   const { data: session } = useSession();
   const [worldID, setWorldID] = useState("");
+  const { user } = useAuth();
 
   useEffect(() => {
-    if (session?.user?.id) {
-      setWorldID(session.user.id); // Fetching World ID from NextAuth session
+    // For development, use mock World ID from auth context if available
+    if (user?.worldId) {
+      setWorldID(user.worldId);
+    } 
+    // Otherwise try to get it from session
+    else if (session?.user?.id) {
+      setWorldID(session.user.id);
     }
-  }, [session]);
+    // If neither is available, use a mock ID
+    else {
+      setWorldID("mock-world-id");
+    }
+  }, [session, user]);
 
   return (
     <div className="mt-4 text-center">

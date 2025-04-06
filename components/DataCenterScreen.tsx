@@ -9,7 +9,7 @@ import DataTab from "./DataTab";
 import BalanceTab from "./BalanceTab";
 import ProfileTab from "./ProfileTab";
 import Footer from "./Footer";
-import { MiniKit } from "@worldcoin/minikit-js";
+// import { MiniKit } from "@worldcoin/minikit-js"; // Commented for development
 import { useAuth } from "@/contexts/AuthContext";
 import { useSession } from "next-auth/react";
 
@@ -22,7 +22,15 @@ export default function DataCenterScreen() {
   const { user, isAuthenticated, login } = useAuth();
   const { data: session } = useSession();
 
+  // Mock wallet address for development
+  const mockWalletAddress = "0x1234567890abcdef1234567890abcdef12345678";
+  const mockWorldId = "mock-world-id";
+
   useEffect(() => {
+    // For development, set mock wallet address
+    setWalletAddress(mockWalletAddress);
+    
+    /* Commented for development
     // If MiniKit is installed, retrieve the wallet address
     if (MiniKit.isInstalled()) {
       const address = MiniKit.walletAddress; // This is set after a successful walletAuth
@@ -30,14 +38,22 @@ export default function DataCenterScreen() {
         setWalletAddress(address);
       }
     }
+    */
   }, []);
 
   // Try to login if we have session and wallet address but no user
   useEffect(() => {
     const attemptLogin = async () => {
-      if (!isAuthenticated && session?.user?.id && walletAddress) {
+      if (!isAuthenticated && walletAddress) {
         try {
-          await login(session.user.id, walletAddress);
+          // For development, use mock world ID
+          await login(mockWorldId, walletAddress);
+          
+          /* Commented for development
+          if (session?.user?.id) {
+            await login(session.user.id, walletAddress);
+          }
+          */
         } catch (error) {
           console.error("Auto-login error:", error);
         }
@@ -45,7 +61,7 @@ export default function DataCenterScreen() {
     };
 
     attemptLogin();
-  }, [isAuthenticated, session, walletAddress, login]);
+  }, [isAuthenticated, walletAddress, login]);
 
   return (
     <div className="min-h-screen bg-[#1E1B2E] text-white pb-12">

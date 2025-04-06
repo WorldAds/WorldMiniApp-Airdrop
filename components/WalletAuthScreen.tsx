@@ -11,8 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-// 1) Import the MiniKit SDK
-import { MiniKit } from "@worldcoin/minikit-js";
+// Import the MiniKit SDK (commented for development)
+// import { MiniKit } from "@worldcoin/minikit-js";
 
 export default function WalletAuthScreen() {
   const router = useRouter();
@@ -21,9 +21,24 @@ export default function WalletAuthScreen() {
   const { data: session } = useSession();
   const { login } = useAuth();
 
-  // 2) Add the async walletAuth logic to this handler
+  // Mock wallet address for development
+  const mockWalletAddress = "0x1234567890abcdef1234567890abcdef12345678";
+  const mockWorldId = "mock-world-id";
+
+  // Add the async walletAuth logic to this handler
   const handleVerifyWallet = async () => {
     try {
+      // For development, skip MiniKit checks and use mock data
+      setIsLoading(true);
+      
+      // Mock successful login
+      await login(mockWorldId, mockWalletAddress);
+      
+      // Show the success modal
+      setIsModalOpen(true);
+      setIsLoading(false);
+      
+      /* Commented for development
       // Check if MiniKit is installed (i.e., you're in the World App)
       if (!MiniKit.isInstalled()) {
         alert("MiniKit not installed (are you in the World App?)");
@@ -90,9 +105,11 @@ export default function WalletAuthScreen() {
       } else {
         console.warn("Signature invalid or other error:", verifyData);
       }
+      */
     } catch (err: any) {
       console.error("Wallet Auth error:", err);
       alert(err.message);
+      setIsLoading(false);
     }
   };
 

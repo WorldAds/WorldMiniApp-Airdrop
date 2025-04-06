@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { MiniKit } from "@worldcoin/minikit-js";
+// import { MiniKit } from "@worldcoin/minikit-js"; // Commented for development
 import { loginUser, getUserByWorldID } from '@/app/api/service';
 
 export interface User {
@@ -27,8 +27,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Mock user data for development
+  const mockUser = {
+    _id: "mock-user-id",
+    worldId: "mock-world-id",
+    nickname: "Developer",
+    walletAddress: "0x1234567890abcdef1234567890abcdef12345678",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
   const login = async (worldId: string, walletAddress: string) => {
     try {
+      // For development, use mock data instead of API call
+      console.log('Mock login with:', { worldId, walletAddress });
+      setUser(mockUser);
+      return mockUser;
+      
+      /* Commented for development
       const response = await loginUser({
         worldId,
         walletAddress
@@ -36,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setUser(response);
       return response;
+      */
     } catch (error) {
       console.error('Login error:', error);
       return null;
@@ -43,6 +60,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const fetchUserData = async () => {
+    // For development, set mock user data
+    setUser(mockUser);
+    setIsLoading(false);
+    
+    /* Commented for development
     if (!MiniKit.isInstalled()) {
       setIsLoading(false);
       return;
@@ -65,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
+    */
   };
 
   useEffect(() => {
