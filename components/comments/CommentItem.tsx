@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Reply } from "@/@types/data";
 import { ChevronDown, ChevronUp, Heart, HeartCrack } from "lucide-react";
 import { getRepliesByCommentId } from "@/app/api/service";
 import ReplyItem from "@/components/comments/ReplyItem";
-import axios from "axios";
+import websocketService from "@/app/api/websocket";
 
 interface CommentItemProps {
   id: string;
@@ -32,12 +32,45 @@ const CommentItem: React.FC<CommentItemProps> = ({
   createdAt,
   likeCount,
   dislikeCount,
-  replyCount,
+  replyCount: initialReplyCount,
   onReplyClick,
 }) => {
   const [showReplies, setShowReplies] = useState(false);
   const [replies, setReplies] = useState<Reply[]>([]);
   const [loading, setLoading] = useState(false);
+  const [replyCount, setReplyCount] = useState(initialReplyCount);
+
+  // Subscribe to new replies for this comment
+  useEffect(() => {
+    if (showReplies) {
+      // Connect to WebSocket if not already connected
+      websocketService.connect().catch(error => {
+        console.error("Failed to connect to WebSocket:", error);
+      });
+      
+      // Subscribe to new replies for this comment
+      const unsubscribeNewReply = websocketService.subscribe('new_reply', (data) => {
+        if (data.commentId === id) {
+          // Add the new reply to the list if we're showing replies
+          if (showReplies) {
+            setReplies(prevReplies => [data, ...prevReplies]);
+          }
+          
+          // Update the reply count
+          setReplyCount(prevCount => prevCount + 1);
+        }
+      });
+      
+      return () => {
+        unsubscribeNewReply();
+      };
+    }
+  }, [id, showReplies]);
+
+  // Update replyCount when initialReplyCount changes
+  useEffect(() => {
+    setReplyCount(initialReplyCount);
+  }, [initialReplyCount]);
 
   const toggleReplies = async () => {
     if (!showReplies && replyCount > 0 && replies.length === 0) {
@@ -101,6 +134,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             </button>
             </div>
 
+            
             {/* Like/Dislike buttons - horizontal layout */}
             <div className="flex items-center">
               <button className="text-gray-400 hover:text-pink-500">

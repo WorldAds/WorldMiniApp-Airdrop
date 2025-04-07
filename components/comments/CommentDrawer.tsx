@@ -15,7 +15,7 @@ import {
 import { X } from "lucide-react";
 import CommentItem from "./CommentItem";
 import CommentInput from "./CommentInput";
-import axios from "axios";
+import websocketService from "@/app/api/websocket";
 
 interface CommentDrawerProps {
   adId: string;
@@ -49,15 +49,49 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
       fetchComments();
       // Pause the video when comments drawer is open
       onVideoStateChange(true);
+      
+      // Connect to WebSocket and join the room for this ad
+      websocketService.connect().then(() => {
+        websocketService.joinRoom(`ad:${adId}`);
+      }).catch(error => {
+        console.error("Failed to connect to WebSocket:", error);
+      });
+      
+      // Subscribe to new comments
+      const unsubscribeNewComment = websocketService.subscribe('new_comment', (data) => {
+        if (data.advertisementId === adId) {
+          // Add the new comment to the list
+          setComments(prevComments => [data, ...prevComments]);
+        }
+      });
+      
+      // Subscribe to new replies
+      const unsubscribeNewReply = websocketService.subscribe('new_reply', (data) => {
+        if (data.advertisementId === adId) {
+          // Update the comment with the new reply count
+          setComments(prevComments => 
+            prevComments.map(comment => 
+              comment._id === data.commentId 
+                ? { ...comment, replyCount: comment.replyCount + 1 } 
+                : comment
+            )
+          );
+        }
+      });
+      
+      return () => {
+        // Resume the video when comments drawer is closed
+        onVideoStateChange(false);
+        
+        // Leave the room and unsubscribe from events
+        websocketService.leaveRoom(`ad:${adId}`);
+        unsubscribeNewComment();
+        unsubscribeNewReply();
+      };
     } else {
       // Resume the video when comments drawer is closed
       onVideoStateChange(false);
     }
-    
-    return () => {
-      // Make sure video resumes if component unmounts
-      onVideoStateChange(false);
-    };
   }, [isOpen, adId, onVideoStateChange]);
   
   const fetchComments = async () => {
@@ -83,9 +117,10 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
     }
   };
   
-  const handleCommentAdded = () => {
-    // Refresh comments after adding a new one
-    fetchComments();
+  const handleCommentAdded = (newComment: Comment) => {
+    // Add the new comment to the list (WebSocket will also handle this)
+    setComments(prevComments => [newComment, ...prevComments]);
+    
     // Clear reply state if we were replying
     setReplyToCommentId(undefined);
   };

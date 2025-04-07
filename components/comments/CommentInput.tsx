@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
 import { postComment, postReply } from "@/app/api/service";
 import { useAuth } from "@/contexts/AuthContext";
-import axios from "axios";
+import { Comment } from "@/@types/data";
+import websocketService from "@/app/api/websocket";
 
 interface CommentInputProps {
   adId: string;
   replyToCommentId?: string;
-  onCommentAdded: () => void;
+  onCommentAdded: (newComment: Comment) => void;
   onCancelReply?: () => void;
 }
 
@@ -34,25 +35,44 @@ const CommentInput: React.FC<CommentInputProps> = ({
     try {
       if (replyToCommentId) {
         // This is a reply to a comment
-        await postReply({
+        const replyData = {
           commentId: replyToCommentId,
           content,
           commentType: "text",
           mediaUrl: "",
+        };
+        
+        const response = await postReply(replyData);
+        
+        // Notify via WebSocket (backend will also broadcast this)
+        websocketService.send('new_reply', {
+          ...response,
+          advertisementId: adId,
+          commentId: replyToCommentId
         });
+        
+        // Notify parent component
+        onCommentAdded(response);
       } else {
         // This is a new comment on the ad
-        await postComment({
+        const commentData = {
           advertisementId: adId,
           content,
           commentType: "text",
           mediaUrl: "",
-        });
+        };
+        
+        const response = await postComment(commentData);
+        
+        // Notify via WebSocket (backend will also broadcast this)
+        websocketService.send('new_comment', response);
+        
+        // Notify parent component
+        onCommentAdded(response);
       }
       
-      // Clear the input and notify parent
+      // Clear the input
       setContent("");
-      onCommentAdded();
     } catch (error: any) {
       console.error("Error posting comment/reply:", error);
     } finally {
