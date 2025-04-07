@@ -12,7 +12,7 @@ import "swiper/css";
 import "swiper/css/effect-cards";
 import "swiper/css/mousewheel";
 import "swiper/css/keyboard";
-import { EffectCards, Mousewheel, Keyboard } from "swiper/modules";
+import { Mousewheel, Keyboard } from "swiper/modules";
 import VideoPlayer from "./VideoPlayer";
 import AdActionButtons from "./AdActionButtons";
 import HTMLContent from "./HTMLContent";
@@ -885,7 +885,17 @@ export default function AdsComponent() {
                 <h3 className="text-white font-bold text-xl">{ad.adsName}</h3>
               </div>
 
-              <AdActionButtons adId={ad._id} completed={completedAds[ad._id]} />
+              <AdActionButtons 
+                adId={ad._id} 
+                completed={completedAds[ad._id]} 
+                onVideoStateChange={(shouldPause) => {
+                  if (shouldPause) {
+                    pauseAllVideos();
+                  } else if (currentVideoRef.current === ad._id) {
+                    autoPlayCurrentVideo();
+                  }
+                }} 
+              />
             </SwiperSlide>
           ))}
         </Swiper>

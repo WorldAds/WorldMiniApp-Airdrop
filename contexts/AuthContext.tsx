@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-// import { MiniKit } from "@worldcoin/minikit-js"; // Commented for development
+import { MiniKit } from "@worldcoin/minikit-js";
 import { loginUser, getUserByWorldID } from '@/app/api/service';
 
 export interface User {
@@ -27,24 +27,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Mock user data for development
-  const mockUser = {
-    _id: "mock-user-id",
-    worldId: "mock-world-id",
-    nickname: "Developer",
-    walletAddress: "0x1234567890abcdef1234567890abcdef12345678",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-
   const login = async (worldId: string, walletAddress: string) => {
     try {
-      // For development, use mock data instead of API call
-      console.log('Mock login with:', { worldId, walletAddress });
-      setUser(mockUser);
-      return mockUser;
-      
-      /* Commented for development
       const response = await loginUser({
         worldId,
         walletAddress
@@ -52,7 +36,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setUser(response);
       return response;
-      */
     } catch (error) {
       console.error('Login error:', error);
       return null;
@@ -60,11 +43,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const fetchUserData = async () => {
-    // For development, set mock user data
-    setUser(mockUser);
-    setIsLoading(false);
-    
-    /* Commented for development
     if (!MiniKit.isInstalled()) {
       setIsLoading(false);
       return;
@@ -78,16 +56,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // We'll need to get the World ID from the session
-      // This will be handled in the components that use this context
-      // by passing the worldId from the session
-
+      // For development, use a mock World ID
+      // In production, you would need to get the World ID from the session or another source
+      const mockWorldId = "mock-world-id";
+      
+      // Try to get user data by World ID
+      try {
+        const userData = await getUserByWorldID(mockWorldId);
+        if (userData) {
+          setUser(userData);
+        } else {
+          // If user doesn't exist, try to login (which will create the user if needed)
+          await login(mockWorldId, walletAddress);
+        }
+      } catch (error) {
+        console.error('Error fetching user by World ID:', error);
+        // Try to login (which will create the user if needed)
+        await login(mockWorldId, walletAddress);
+      }
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
       setIsLoading(false);
     }
-    */
   };
 
   useEffect(() => {

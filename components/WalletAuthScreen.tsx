@@ -11,8 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-// Import the MiniKit SDK (commented for development)
-// import { MiniKit } from "@worldcoin/minikit-js";
 
 export default function WalletAuthScreen() {
   const router = useRouter();
@@ -21,91 +19,33 @@ export default function WalletAuthScreen() {
   const { data: session } = useSession();
   const { login } = useAuth();
 
-  // Mock wallet address for development
+  // Mock data for development
   const mockWalletAddress = "0x1234567890abcdef1234567890abcdef12345678";
   const mockWorldId = "mock-world-id";
 
   // Add the async walletAuth logic to this handler
   const handleVerifyWallet = async () => {
     try {
-      // For development, skip MiniKit checks and use mock data
       setIsLoading(true);
-      
-      // Mock successful login
-      await login(mockWorldId, mockWalletAddress);
-      
-      // Show the success modal
-      setIsModalOpen(true);
-      setIsLoading(false);
-      
-      /* Commented for development
-      // Check if MiniKit is installed (i.e., you're in the World App)
-      if (!MiniKit.isInstalled()) {
-        alert("MiniKit not installed (are you in the World App?)");
-        return;
-      }
 
-      // Fetch a nonce from /api/nonce
-      const res = await fetch("/api/nonce", { method: "GET" });
-      if (!res.ok) {
-        throw new Error("Failed to fetch nonce");
-      }
-      const { nonce } = await res.json();
-
-      // Invoke walletAuth command
-      const { finalPayload } = await MiniKit.commandsAsync.walletAuth({
-        nonce,
-        expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        statement: "Authorize this wallet with my World ID",
-      });
-
-      // If the user canceled or there's an error from MiniKit
-      if (finalPayload.status === "error") {
-        console.log("User canceled or error in MiniKit:", finalPayload);
-        return;
-      }
-
-      // Send the signature payload to the server for verification
-      const verifyRes = await fetch("/api/complete-siwe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          payload: finalPayload,
-          nonce,
-        }),
-      });
-
-      if (!verifyRes.ok) {
-        const errorData = await verifyRes.json();
-        throw new Error(errorData.message || "Failed to verify signature");
-      }
-
-      const verifyData = await verifyRes.json();
-      if (verifyData.status === "success") {
-        // Wallet is verified, now login with our backend
-        if (session?.user?.id && MiniKit.walletAddress) {
-          setIsLoading(true);
-          try {
-            // Login with our backend
-            const userData = await login(session.user.id, MiniKit.walletAddress);
-            if (userData) {
-              console.log("Login successful:", userData);
-            } else {
-              console.warn("Login failed");
-            }
-          } catch (error) {
-            console.error("Login error:", error);
-          } finally {
-            setIsLoading(false);
-          }
+      // Use mock data for login
+      try {
+        // Login with our backend using mock data
+        const userData = await login(mockWorldId, mockWalletAddress);
+        if (userData) {
+          console.log("Login successful:", userData);
+          // Show the success modal
+          setIsModalOpen(true);
+        } else {
+          console.warn("Login failed");
+          alert("Login failed. Please try again.");
         }
-        
-        // Show the success modal
-        setIsModalOpen(true);
-      } else {
-        console.warn("Signature invalid or other error:", verifyData);
+      } catch (error) {
+        console.error("Login error:", error);
+        alert("Login error. Please try again.");
       }
-      */
+
+      setIsLoading(false);
     } catch (err: any) {
       console.error("Wallet Auth error:", err);
       alert(err.message);

@@ -1,17 +1,24 @@
 import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { triggerConfetti } from "@/utils/confetti";
+import CommentDrawer from "./comments/CommentDrawer";
 
 interface Props {
   adId: string;
   completed?: boolean;
+  onVideoStateChange?: (shouldPause: boolean) => void;
 }
 import profileIcon from "../public/icons/profile.png";
 import { useRouter } from "next/navigation";
 
-const AdActionButtons: React.FC<Props> = ({ adId, completed = false }) => {
+const AdActionButtons: React.FC<Props> = ({ 
+  adId, 
+  completed = false,
+  onVideoStateChange = () => {} // Default no-op function
+}) => {
   const [isFavourited, setIsFavourited] = useState(false);
   const [activeButton, setActiveButton] = useState<string | null>(null);
+  const [isCommentDrawerOpen, setIsCommentDrawerOpen] = useState(false);
   const favouriteButtonRef = useRef<SVGSVGElement>(null);
   const router = useRouter();
 
@@ -67,11 +74,12 @@ const AdActionButtons: React.FC<Props> = ({ adId, completed = false }) => {
         version="1.1"
         xmlns="http://www.w3.org/2000/svg"
         p-id="8586"
-         width="30"
+        width="30"
         height="30"
-        className={`cursor-pointer transition-opacity duration-200 ${activeButton === 'comment' ? 'opacity-100' : 'opacity-30'}`}
+        className={`cursor-pointer transition-opacity duration-200 ${activeButton === 'comment' || isCommentDrawerOpen ? 'opacity-100' : 'opacity-30'}`}
         onMouseEnter={() => setActiveButton('comment')}
         onMouseLeave={() => setActiveButton(null)}
+        onClick={() => setIsCommentDrawerOpen(true)}
       >
         <path
           d="M512 0C226.742857 0 0 197.485714 0 446.171429c0 138.971429 73.142857 270.628571 190.171429 351.085714L190.171429 1024l226.742857-138.971429c29.257143 7.314286 65.828571 7.314286 95.085714 7.314286 285.257143 0 512-197.485714 512-446.171429C1024 197.485714 797.257143 0 512 0zM256 512C219.428571 512 190.171429 482.742857 190.171429 446.171429S219.428571 380.342857 256 380.342857c36.571429 0 65.828571 29.257143 65.828571 65.828571S292.571429 512 256 512zM512 512C475.428571 512 446.171429 482.742857 446.171429 446.171429S475.428571 380.342857 512 380.342857c36.571429 0 65.828571 29.257143 65.828571 65.828571S548.571429 512 512 512zM768 512C731.428571 512 702.171429 482.742857 702.171429 446.171429s29.257143-65.828571 65.828571-65.828571c36.571429 0 65.828571 29.257143 65.828571 65.828571S804.571429 512 768 512z"
@@ -112,6 +120,13 @@ const AdActionButtons: React.FC<Props> = ({ adId, completed = false }) => {
           height={30}
         />
       </div>
+      {/* Comment Drawer */}
+      <CommentDrawer
+        adId={adId}
+        isOpen={isCommentDrawerOpen}
+        onClose={() => setIsCommentDrawerOpen(false)}
+        onVideoStateChange={onVideoStateChange}
+      />
     </div>
   );
 };

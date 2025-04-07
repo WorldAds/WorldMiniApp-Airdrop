@@ -31,3 +31,44 @@ export interface LoginUserParams {
   walletAddress: string
 }
   
+export interface Comment{
+  _id: string;
+  advertisementId: string;
+  userId: string;
+  content: string;
+  commentType: string;
+  mediaUrl: string;
+  createdAt: string;
+  updatedAt: string;
+  likeCount: number;
+  dislikeCount: number;
+  replyCount: number
+}
+
+export interface Reply{
+  _id: string;
+  commentId: string;
+  userId: string;
+  content: string;
+  commentType: string;
+  mediaUrl: string;
+  createdAt: string;
+  updatedAt: string;
+  likeCount: number;
+  dislikeCount: number;
+}
+
+
+export interface PostCommentParams{
+  advertisementId: string;
+  content:string;
+  commentType:string;
+  mediaUrl: string;
+}
+
+export interface PostReplyParams{
+  commentId: string;
+  content:string;
+  commentType:string;
+  mediaUrl: string;
+}

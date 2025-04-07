@@ -1,10 +1,10 @@
-import { AdRewardParams, CreateUserParams, LoginUserParams } from '@/@types/data';
+import { AdRewardParams, CreateUserParams, LoginUserParams, PostCommentParams, PostReplyParams } from '@/@types/data';
 import axios from 'axios';
 
 axios.defaults.withCredentials = false;
 
 const apiClient = axios.create({
-  baseURL: 'https://world-backend-v1-6a037ce588aa.herokuapp.com',
+  baseURL: 'https://mini-app-backend-0693857f8ca3.herokuapp.com',
   timeout: 10000,
   withCredentials: false, 
   headers: {
@@ -100,3 +100,56 @@ export const getUserByWorldID = async (id:string) => {
     throw error;
   }
 };
+
+
+export const getCommentsByAdvertisementId = async (
+  advertisementId: string,
+  page: number = 1,
+  limit: number = 10
+) => {
+  try {
+    const response = await apiClient.get(`/api/v1/comments/advertisement/${advertisementId}`, {
+      params: { page, limit }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching comments by advertisement ID:', error);
+    throw error;
+  }
+};
+
+export const postComment = async(params: PostCommentParams) =>{
+  try {
+    const response = await apiClient.post('/api/v1/comments', params);
+    return response.data;
+  } catch (error) {
+    console.error('Error posting comment:', error);
+    throw error;
+  }
+}
+
+export const getRepliesByCommentId = async (
+  commentId: string,
+  page: number = 1,
+  limit: number = 10
+) => {
+  try {
+    const response = await apiClient.get(`/api/v1/comments/reply/${commentId}`, {
+      params: { page, limit }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching replies by comment ID:', error);
+    throw error;
+  }
+};
+
+export const postReply = async(params: PostReplyParams) =>{
+  try {
+    const response = await apiClient.post('/api/v1/comments/reply', params);
+    return response.data;
+  } catch (error) {
+    console.error('Error posting reply:', error);
+    throw error;
+  }
+}
