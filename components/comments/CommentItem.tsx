@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { Reply } from "@/@types/data";
 import { ChevronDown, ChevronUp, Heart, HeartCrack } from "lucide-react";
 import { getRepliesByCommentId } from "@/app/api/service";
@@ -11,10 +12,12 @@ interface CommentItemProps {
   id: string;
   content: string;
   username: string;
+  userId: string; // Added userId field
   createdAt: string;
   likeCount: number;
   dislikeCount: number;
   replyCount: number;
+  mediaUrl?: string;
   onReplyClick: (commentId: string) => void;
 }
 
@@ -29,16 +32,28 @@ const CommentItem: React.FC<CommentItemProps> = ({
   id,
   content,
   username,
+  userId,
   createdAt,
   likeCount,
   dislikeCount,
   replyCount: initialReplyCount,
+  mediaUrl,
   onReplyClick,
 }) => {
   const [showReplies, setShowReplies] = useState(false);
   const [replies, setReplies] = useState<Reply[]>([]);
   const [loading, setLoading] = useState(false);
   const [replyCount, setReplyCount] = useState(initialReplyCount);
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
+
+  // Construct avatar URL based on userId
+  useEffect(() => {
+    if (userId) {
+      // Assuming the avatar URL follows a pattern like /uploads/avatars/{userId}.png
+      const avatarUrl = `/uploads/avatars/${userId}.png`;
+      setUserAvatarUrl(avatarUrl);
+    }
+  }, [userId]);
 
   // Subscribe to new replies for this comment
   useEffect(() => {
@@ -107,8 +122,20 @@ const CommentItem: React.FC<CommentItemProps> = ({
     <div className="py-3 border-b border-gray-700">
       <div className="flex items-start">
         {/* User avatar - left side */}
-        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#AC54F1] to-[#EB489A] flex items-center justify-center mr-3">
-          <span className="text-white font-bold">{username.charAt(0).toUpperCase()}</span>
+        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#AC54F1] to-[#EB489A] p-1 mr-3">
+          <div className="w-full h-full rounded-full overflow-hidden bg-[#1E1B2E] flex items-center justify-center">
+            {userAvatarUrl ? (
+              <Image 
+                src={`${process.env.NEXT_PUBLIC_API_BASE_URL}${userAvatarUrl}`}
+                alt="User Avatar"
+                width={40}
+                height={40}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-white font-bold">{username.charAt(0).toUpperCase()}</span>
+            )}
+          </div>
         </div>
         
         {/* Right side content - 4 layers */}
@@ -118,8 +145,21 @@ const CommentItem: React.FC<CommentItemProps> = ({
             <span className="font-semibold text-white">{username}</span>
           </div>
           
-          {/* Layer 2: Comment content */}
-          <p className="text-white mt-1">{content}</p>
+          {/* Layer 2: Comment content and media */}
+          <div className="mt-1">
+            <p className="text-white">{content}</p>
+            
+            {/* Add mediaUrl property to CommentItemProps */}
+            {mediaUrl && mediaUrl.trim() !== "" && (
+              <div className="mt-2">
+                <img 
+                  src={`${process.env.NEXT_PUBLIC_API_BASE_URL}${mediaUrl}`} 
+                  alt="Comment media" 
+                  className="max-h-60 rounded-lg object-contain"
+                />
+              </div>
+            )}
+          </div>
           
           {/* Layer 3: Reply time, Reply button, Like/Dislike */}
           <div className="flex items-center justify-between mt-2">
@@ -176,9 +216,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       key={reply._id}
                       content={reply.content}
                       username={`User ${reply.userId.slice(-4)}`} // Use last 4 chars of userId for better variety
+                      userId={reply.userId} // Pass the userId to ReplyItem
                       createdAt={reply.createdAt}
                       likeCount={reply.likeCount}
                       dislikeCount={reply.dislikeCount}
+                      mediaUrl={reply.mediaUrl}
                     />
                   ))}
                 </div>

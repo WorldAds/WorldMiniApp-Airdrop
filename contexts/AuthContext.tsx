@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { MiniKit } from "@worldcoin/minikit-js";
-import { loginUser, getUserByWorldID } from '@/app/api/service';
+import { loginUser, getUserByWorldID, uploadUserAvatar } from '@/app/api/service';
 
 export interface User {
   _id: string;
@@ -11,6 +11,7 @@ export interface User {
   walletAddress: string;
   createdAt: string;
   updatedAt: string;
+  avatarUrl: string;
 }
 
 interface AuthContextType {
@@ -19,6 +20,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (worldId: string, walletAddress: string) => Promise<User | null>;
   fetchUserData: () => Promise<void>;
+  updateAvatar: (file: File) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -81,6 +83,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateAvatar = async (file: File) => {
+    if (!user) {
+      console.error('Cannot update avatar: No user logged in');
+      return false;
+    }
+
+    try {
+      const response = await uploadUserAvatar(user._id, file);
+      
+      // Update the user state with the new avatar URL
+      setUser(prevUser => {
+        if (!prevUser) return null;
+        return {
+          ...prevUser,
+          avatarUrl: response.avatarUrl
+        };
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating avatar:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     fetchUserData();
   }, []);
@@ -90,7 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     isAuthenticated: !!user,
     login,
-    fetchUserData
+    fetchUserData,
+    updateAvatar
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

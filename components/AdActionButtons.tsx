@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { triggerConfetti } from "@/utils/confetti";
 import CommentDrawer from "./comments/CommentDrawer";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   adId: string;
@@ -16,6 +17,7 @@ const AdActionButtons: React.FC<Props> = ({
   completed = false,
   onVideoStateChange = () => {} // Default no-op function
 }) => {
+  const { user } = useAuth();
   const [isFavourited, setIsFavourited] = useState(false);
   const [activeButton, setActiveButton] = useState<string | null>(null);
   const [isCommentDrawerOpen, setIsCommentDrawerOpen] = useState(false);
@@ -110,15 +112,31 @@ const AdActionButtons: React.FC<Props> = ({
       <div
         className="w-[30px] h-[30px] rounded-full bg-white overflow-hidden"
         onClick={() => {
-          router.push("/data-center?tab=profile");
+          // Check if user is logged in before navigating to profile
+          if (user) {
+            router.push("/data-center?tab=profile");
+          } else {
+            // If not logged in, navigate to wallet auth page for manual login
+            router.push("/wallet-auth");
+          }
         }}
       >
-        <Image
-          src={profileIcon}
-          alt="Advertiser Avatar"
-          width={30}
-          height={30}
-        />
+        {user?.avatarUrl ? (
+          <Image
+            src={`${process.env.NEXT_PUBLIC_API_BASE_URL}${user.avatarUrl}`}
+            alt="User Avatar"
+            width={30}
+            height={30}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <Image
+            src={profileIcon}
+            alt="User Avatar"
+            width={30}
+            height={30}
+          />
+        )}
       </div>
       {/* Comment Drawer */}
       <CommentDrawer

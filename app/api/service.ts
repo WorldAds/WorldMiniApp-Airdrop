@@ -4,7 +4,7 @@ import axios from 'axios';
 axios.defaults.withCredentials = false;
 
 const apiClient = axios.create({
-  baseURL: 'https://mini-app-backend-0693857f8ca3.herokuapp.com',
+  baseURL: `${process.env.NEXT_PUBLIC_API_BASE_URL}`,
   timeout: 10000,
   withCredentials: false, 
   headers: {
@@ -101,6 +101,28 @@ export const getUserByWorldID = async (id:string) => {
   }
 };
 
+export const uploadUserAvatar = async (userId: string, file: File) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await apiClient.post(
+      `/api/v1/users/${userId}/avatar/upload`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error('Error uploading avatar:', error);
+    throw error;
+  }
+};
+
 
 export const getCommentsByAdvertisementId = async (
   advertisementId: string,
@@ -128,6 +150,32 @@ export const postComment = async(params: PostCommentParams) =>{
   }
 }
 
+export const postCommentWithMedia = async (
+  advertisementId: string,
+  content: string,
+  commentType: string,
+  mediaFile: File
+) => {
+  try {
+    const formData = new FormData();
+    formData.append('advertisementId', advertisementId);
+    formData.append('content', content);
+    formData.append('commentType', commentType);
+    formData.append('media', mediaFile); // Changed back to 'media' based on backend error
+
+    const response = await apiClient.post('/api/v1/comments/with-media', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error posting comment with media:', error);
+    throw error;
+  }
+};
+
 export const getRepliesByCommentId = async (
   commentId: string,
   page: number = 1,
@@ -153,3 +201,29 @@ export const postReply = async(params: PostReplyParams) =>{
     throw error;
   }
 }
+
+export const postReplyWithMedia = async (
+  commentId: string,
+  content: string,
+  commentType: string,
+  mediaFile: File
+) => {
+  try {
+    const formData = new FormData();
+    formData.append('commentId', commentId);
+    formData.append('content', content);
+    formData.append('commentType', commentType);
+    formData.append('media', mediaFile); // Changed back to 'media' based on backend error
+
+    const response = await apiClient.post('/api/v1/comments/reply/with-media', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error posting reply with media:', error);
+    throw error;
+  }
+};

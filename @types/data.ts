@@ -23,7 +23,8 @@ export interface AdRewardParams {
 export interface CreateUserParams {
 worldId: string;
 nickname: string;
-walletAddress: string
+walletAddress: string;
+avatar?: string;
 }
 
 export interface LoginUserParams {

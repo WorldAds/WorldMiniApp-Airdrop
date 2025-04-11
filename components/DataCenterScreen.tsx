@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import UserAvatar from "./UserAvatar";
-import WorldIDComponent from "./WorldIDComponent";
+// Removed avatar and WorldID components
 import DataTab from "./DataTab";
 import BalanceTab from "./BalanceTab";
 import ProfileTab from "./ProfileTab";
@@ -68,9 +67,6 @@ export default function DataCenterScreen() {
 
       {/* Main Content */}
       <main className="flex flex-col items-center px-4 pt-8">
-        <UserAvatar />
-        <WorldIDComponent />
-
         {/* Tabs */}
         <div className="flex gap-4 mt-8 mb-4 relative">
           {["Data", "Balance", "Profile"].map((tab) => (

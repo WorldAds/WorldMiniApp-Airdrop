@@ -166,17 +166,18 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
             </div>
           ) : (
             comments.map((comment) => (
-              <CommentItem
-                key={comment._id}
-                id={comment._id}
-                content={comment.content}
-                username={`User ${comment.userId.slice(-4)}`} // Use last 4 chars of userId for better variety
-                createdAt={comment.createdAt}
-                likeCount={comment.likeCount}
-                dislikeCount={comment.dislikeCount}
-                replyCount={comment.replyCount}
-                onReplyClick={handleReplyClick}
-              />
+                    <CommentItem
+                      key={comment._id}
+                      id={comment._id}
+                      content={comment.content}
+                      username={`User ${comment.userId.slice(-4)}`} // Use last 4 chars of userId for better variety
+                      createdAt={comment.createdAt}
+                      likeCount={comment.likeCount}
+                      dislikeCount={comment.dislikeCount}
+                      replyCount={comment.replyCount}
+                      mediaUrl={comment.mediaUrl}
+                      onReplyClick={handleReplyClick}
+                    />
             ))
           )}
         </div>
