@@ -103,24 +103,27 @@ export default function AdsComponent() {
       // 发送交易
       await sendRewardTransaction(adId);
       
-      // 根据广告类型设置奖励动画
-      if (
-        currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
-        currentAd.creativeURL.includes("youtube.com") ||
-        currentAd.creativeURL.includes("youtu.be")
-      ) {
-        // 视频奖励
-        setShowVideoReward((prev) => ({ ...prev, [adId]: true }));
-      } else if (currentAd.creativeType.toLowerCase() === "html") {
-        // HTML 奖励
-        setShowHtmlReward((prev) => ({ ...prev, [adId]: true }));
-      } else if (
-        currentAd.creativeType.toLowerCase() === "image" ||
-        currentAd.creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)
-      ) {
-        // 图片奖励
-        setShowImageReward((prev) => ({ ...prev, [adId]: true }));
-      }
+    // 根据广告类型设置奖励动画
+    const creativeURL = currentAd.creativeURL || '';
+    const creativeType = currentAd.creativeType || '';
+    
+    if (
+      creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
+      creativeURL.includes("youtube.com") ||
+      creativeURL.includes("youtu.be")
+    ) {
+      // 视频奖励
+      setShowVideoReward((prev) => ({ ...prev, [adId]: true }));
+    } else if (creativeType.toLowerCase() === "html") {
+      // HTML 奖励
+      setShowHtmlReward((prev) => ({ ...prev, [adId]: true }));
+    } else if (
+      creativeType.toLowerCase() === "image" ||
+      creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+    ) {
+      // 图片奖励
+      setShowImageReward((prev) => ({ ...prev, [adId]: true }));
+    }
     } catch (error) {
       console.error("Error sending reward transaction:", error);
       // 交易失败时不显示奖励动画
@@ -309,7 +312,7 @@ export default function AdsComponent() {
         );
 
         // For YouTube Shorts, we need special handling
-        if (currentAd.creativeURL.includes("youtube.com/shorts/")) {
+        if ((currentAd.creativeURL || '').includes("youtube.com/shorts/")) {
           console.log("Detected YouTube Shorts URL, applying special handling");
 
           // Find the specific iframe for this ad
@@ -344,9 +347,9 @@ export default function AdsComponent() {
         }
         // For regular YouTube videos, use the YouTube API
         else if (
-          (currentAd.creativeURL.includes("youtube.com") || 
-           currentAd.creativeURL.includes("youtu.be")) && 
-          !currentAd.creativeURL.includes("shorts")
+          ((currentAd.creativeURL || '').includes("youtube.com") || 
+           (currentAd.creativeURL || '').includes("youtu.be")) && 
+          !(currentAd.creativeURL || '').includes("shorts")
         ) {
           // Find the specific iframe for this ad
           const adContainer = document.querySelector(
@@ -370,7 +373,7 @@ export default function AdsComponent() {
           }
         }
         // For regular video elements, use the standard video API
-        else if (currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i)) {
+        else if ((currentAd.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i)) {
           const adContainer = document.querySelector(
             `[data-ad-id="${currentAd._id}"]`
           );
@@ -391,7 +394,7 @@ export default function AdsComponent() {
         
         // Force a re-render of the video player to ensure it's properly initialized
         // But only for non-shorts videos to avoid conflicts
-        if (!currentAd.creativeURL.includes("youtube.com/shorts/")) {
+        if (!(currentAd.creativeURL || '').includes("youtube.com/shorts/")) {
           setAds((prevAds) => [...prevAds]);
         }
       }
@@ -407,31 +410,31 @@ export default function AdsComponent() {
     const previousAd = ads[previousIndex];
     
     if (previousAd) {
-      console.log(`Previous ad: ${previousAd.adsName}, type: ${previousAd.creativeType}`);
+      console.log(`Previous ad: ${previousAd.adsName || ''}, type: ${previousAd.creativeType || ''}`);
     }
     if (currentAd) {
-      console.log(`Current ad: ${currentAd.adsName}, type: ${currentAd.creativeType}`);
+      console.log(`Current ad: ${currentAd.adsName || ''}, type: ${currentAd.creativeType || ''}`);
     }
     
     const isCurrentVideo = currentAd && (
-      currentAd.creativeType.toLowerCase() === "video" ||
-      currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
-      currentAd.creativeURL.includes("youtube.com") ||
-      currentAd.creativeURL.includes("youtu.be")
+      (currentAd.creativeType || '').toLowerCase() === "video" ||
+      (currentAd.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i) ||
+      (currentAd.creativeURL || '').includes("youtube.com") ||
+      (currentAd.creativeURL || '').includes("youtu.be")
     );
     
     if (isCurrentVideo) {
       currentVideoRef.current = currentAd._id;
-      console.log(`Set current video to: ${currentAd.adsName}`);
+      console.log(`Set current video to: ${currentAd.adsName || ''}`);
     }
     
     pauseAllVideos();
     
     if (previousAd && (
-      previousAd.creativeType.toLowerCase() === "video" ||
-      previousAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
-      previousAd.creativeURL.includes("youtube.com") ||
-      previousAd.creativeURL.includes("youtu.be")
+      (previousAd.creativeType || '').toLowerCase() === "video" ||
+      (previousAd.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i) ||
+      (previousAd.creativeURL || '').includes("youtube.com") ||
+      (previousAd.creativeURL || '').includes("youtu.be")
     )) {
       const prevAdContainer = document.querySelector(
         `[data-ad-id="${previousAd._id}"]`
@@ -442,7 +445,7 @@ export default function AdsComponent() {
         if (video) {
           try {
             video.pause();
-            console.log(`Explicitly paused previous video: ${previousAd.adsName}`);
+            console.log(`Explicitly paused previous video: ${previousAd.adsName || ''}`);
           } catch (e) {
             console.error("Error pausing previous video:", e);
           }
@@ -450,8 +453,8 @@ export default function AdsComponent() {
         
         const iframe = prevAdContainer.querySelector("iframe");
         if (iframe && (
-          previousAd.creativeURL.includes("youtube.com") || 
-          previousAd.creativeURL.includes("youtu.be")
+          (previousAd.creativeURL || '').includes("youtube.com") || 
+          (previousAd.creativeURL || '').includes("youtu.be")
         )) {
           try {
             const contentWindow = (iframe as HTMLIFrameElement).contentWindow;
@@ -460,7 +463,7 @@ export default function AdsComponent() {
                 '{"event":"command","func":"pauseVideo","args":""}',
                 "*"
               );
-              console.log(`Explicitly paused previous YouTube video: ${previousAd.adsName}`);
+              console.log(`Explicitly paused previous YouTube video: ${previousAd.adsName || ''}`);
             }
           } catch (e) {
             console.error("Error pausing previous YouTube video:", e);
@@ -482,30 +485,30 @@ export default function AdsComponent() {
     setViewStartTime((prev) => ({ ...prev, [currentAd._id]: Date.now() }));
     
     // For HTML ads, set a timer to mark as completed after 10 seconds
-    if (currentAd.creativeType.toLowerCase() === "html") {
-      console.log(`Setting 10 second timer for HTML ad: ${currentAd.adsName}`);
+    if ((currentAd.creativeType || '').toLowerCase() === "html") {
+      console.log(`Setting 10 second timer for HTML ad: ${currentAd.adsName || ''}`);
       timerRef.current = setTimeout(() => {
-        console.log(`HTML ad viewed for 10 seconds: ${currentAd.adsName}`);
+        console.log(`HTML ad viewed for 10 seconds: ${currentAd.adsName || ''}`);
         handleContentComplete(currentAd._id);
       }, 10000);
     } 
     // For Image ads, set a timer to mark as completed after 5 seconds
     else if (
-      currentAd.creativeType.toLowerCase() === "image" ||
-      currentAd.creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+      (currentAd.creativeType || '').toLowerCase() === "image" ||
+      (currentAd.creativeURL || '').match(/\.(jpg|jpeg|png|gif|webp)$/i)
     ) {
-      console.log(`Setting 5 second timer for Image ad: ${currentAd.adsName}`);
+      console.log(`Setting 5 second timer for Image ad: ${currentAd.adsName || ''}`);
       timerRef.current = setTimeout(() => {
-        console.log(`Image ad viewed for 5 seconds: ${currentAd.adsName}`);
+        console.log(`Image ad viewed for 5 seconds: ${currentAd.adsName || ''}`);
         handleContentComplete(currentAd._id);
       }, 5000);
     }
     // For video ads, set the current video reference and auto-play
     else if (
-      currentAd.creativeType.toLowerCase() === "video" ||
-      currentAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
-      currentAd.creativeURL.includes("youtube.com") ||
-      currentAd.creativeURL.includes("youtu.be")
+      (currentAd.creativeType || '').toLowerCase() === "video" ||
+      (currentAd.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i) ||
+      (currentAd.creativeURL || '').includes("youtube.com") ||
+      (currentAd.creativeURL || '').includes("youtu.be")
     ) {
       currentVideoRef.current = currentAd._id;
       
@@ -523,8 +526,8 @@ export default function AdsComponent() {
         return (
           <div className="relative w-full h-full" data-ad-id={ad._id}>
             <Image
-              src={ad.creativeURL}
-              alt={ad.adsName}
+              src={ad.creativeURL || ''}
+              alt={ad.adsName || ''}
               fill
               className="object-contain rounded-lg"
               onLoadingComplete={() => {
@@ -538,7 +541,7 @@ export default function AdsComponent() {
         return (
           <div className="relative w-full h-full" data-ad-id={ad._id}>
             <HTMLContent
-              htmlUrl={ad.creativeURL}
+              htmlUrl={ad.creativeURL || ''}
               onLoad={() => {
                 console.log(`HTML content loaded: ${ad.adsName}`);
               }}
@@ -554,7 +557,7 @@ export default function AdsComponent() {
                     <button
                       onClick={() =>
                         window.open(
-                          ad.creativeURL,
+                          ad.creativeURL || '',
                           "_blank",
                           "noopener,noreferrer"
                         )
@@ -574,7 +577,7 @@ export default function AdsComponent() {
         return (
           <div className="relative w-full h-full" data-ad-id={ad._id}>
             <VideoPlayer
-              videoSrc={ad.creativeURL}
+              videoSrc={ad.creativeURL || ''}
               onVideoEnd={() => {
                 handleContentComplete(ad._id);
               }}
@@ -585,29 +588,30 @@ export default function AdsComponent() {
         );
 
       default:
-        if (ad.creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+        const creativeURL = ad.creativeURL || '';
+        if (creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
           return (
             <div className="relative w-full h-full" data-ad-id={ad._id}>
               <Image
-                src={ad.creativeURL}
-                alt={ad.adsName}
+                src={creativeURL}
+                alt={ad.adsName || ''}
                 fill
                 className="object-contain rounded-lg"
                 onLoadingComplete={() => {
-                  console.log(`Image loaded: ${ad.adsName}`);
+                  console.log(`Image loaded: ${ad.adsName || ''}`);
                 }}
               />
             </div>
           );
         } else if (
-          ad.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
-          ad.creativeURL.includes("youtube.com") ||
-          ad.creativeURL.includes("youtu.be")
+          creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
+          creativeURL.includes("youtube.com") ||
+          creativeURL.includes("youtu.be")
         ) {
           return (
             <div className="relative w-full h-full" data-ad-id={ad._id}>
               <VideoPlayer
-                videoSrc={ad.creativeURL}
+                videoSrc={ad.creativeURL || ''}
                 onVideoEnd={() => {
                   handleContentComplete(ad._id);
                 }}
@@ -645,7 +649,7 @@ export default function AdsComponent() {
       setViewStartTime((prev) => ({ ...prev, [firstAd._id]: Date.now() }));
       
       // For HTML ads, set a timer to mark as completed after 10 seconds
-      if (firstAd.creativeType.toLowerCase() === "html") {
+      if ((firstAd.creativeType || '').toLowerCase() === "html") {
         console.log(`Setting 10 second timer for HTML ad: ${firstAd.adsName}`);
         timerRef.current = setTimeout(() => {
           console.log(`HTML ad viewed for 10 seconds: ${firstAd.adsName}`);
@@ -654,8 +658,8 @@ export default function AdsComponent() {
       } 
       // For Image ads, set a timer to mark as completed after 5 seconds
       else if (
-        firstAd.creativeType.toLowerCase() === "image" ||
-        firstAd.creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+        (firstAd.creativeType || '').toLowerCase() === "image" ||
+        (firstAd.creativeURL || '').match(/\.(jpg|jpeg|png|gif|webp)$/i)
       ) {
         console.log(`Setting 5 second timer for Image ad: ${firstAd.adsName}`);
         timerRef.current = setTimeout(() => {
@@ -665,10 +669,10 @@ export default function AdsComponent() {
       } 
       // For video ads, set the current video reference and auto-play
       else if (
-        firstAd.creativeType.toLowerCase() === "video" ||
-        firstAd.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
-        firstAd.creativeURL.includes("youtube.com") ||
-        firstAd.creativeURL.includes("youtu.be")
+        (firstAd.creativeType || '').toLowerCase() === "video" ||
+        (firstAd.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i) ||
+        (firstAd.creativeURL || '').includes("youtube.com") ||
+        (firstAd.creativeURL || '').includes("youtu.be")
       ) {
         // Set current video reference to the first ad
         currentVideoRef.current = firstAd._id;
@@ -761,10 +765,10 @@ export default function AdsComponent() {
                   className="absolute inset-0 z-10"
                   style={{
                     pointerEvents:
-                      ad.creativeType.toLowerCase() === "video" ||
-                      ad.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
-                      ad.creativeURL.includes("youtube.com") ||
-                      ad.creativeURL.includes("youtu.be")
+                      (ad.creativeType || '').toLowerCase() === "video" ||
+                      (ad.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i) ||
+                      (ad.creativeURL || '').includes("youtube.com") ||
+                      (ad.creativeURL || '').includes("youtu.be")
                         ? "none"
                         : "auto",
                   }}
@@ -773,19 +777,19 @@ export default function AdsComponent() {
                     className="absolute inset-0"
                     style={{
                       pointerEvents:
-                        ad.creativeType.toLowerCase() === "video" ||
-                        ad.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
-                        ad.creativeURL.includes("youtube.com") ||
-                        ad.creativeURL.includes("youtu.be")
+                        (ad.creativeType || '').toLowerCase() === "video" ||
+                        (ad.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i) ||
+                        (ad.creativeURL || '').includes("youtube.com") ||
+                        (ad.creativeURL || '').includes("youtu.be")
                           ? "none"
                           : "auto",
                     }}
                     onClick={(e) => {
                       if (
-                        ad.creativeType.toLowerCase() !== "video" &&
-                        !ad.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) &&
-                        !ad.creativeURL.includes("youtube.com") &&
-                        !ad.creativeURL.includes("youtu.be")
+                        (ad.creativeType || '').toLowerCase() !== "video" &&
+                        !(ad.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i) &&
+                        !(ad.creativeURL || '').includes("youtube.com") &&
+                        !(ad.creativeURL || '').includes("youtu.be")
                       ) {
                         e.stopPropagation();
                       }
@@ -813,10 +817,10 @@ export default function AdsComponent() {
                 )}
 
                 {/* Swipe detection overlay - only for videos */}
-                {(ad.creativeType.toLowerCase() === "video" ||
-                  ad.creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
-                  ad.creativeURL.includes("youtube.com") ||
-                  ad.creativeURL.includes("youtu.be")) && (
+                {((ad.creativeType || '').toLowerCase() === "video" ||
+                  (ad.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i) ||
+                  (ad.creativeURL || '').includes("youtube.com") ||
+                  (ad.creativeURL || '').includes("youtu.be")) && (
                   <div className="absolute inset-0 z-[5]">
                     {/* Top swipe area - to go to previous slide */}
                     <div
@@ -882,7 +886,7 @@ export default function AdsComponent() {
               </div>
 
               <div className="absolute bottom-10 left-4 z-20 p-2 rounded-lg">
-                <h3 className="text-white font-bold text-xl">{ad.adsName}</h3>
+                <h3 className="text-white font-bold text-xl">{ad.adsName || ''}</h3>
               </div>
 
               <AdActionButtons 
