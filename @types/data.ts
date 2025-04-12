@@ -76,3 +76,10 @@ export interface PostReplyParams{
   worldId:string;
   advertisementId?: string; // Add optional advertisementId to ensure it's included in the reply
 }
+
+export interface ReactionParams {
+  targetId: string;
+  targetType: "Comment" | "Reply";
+  worldId: string;
+  reactionType: "Like" | "Dislike";
+}

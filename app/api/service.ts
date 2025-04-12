@@ -1,4 +1,4 @@
-import { AdRewardParams, CreateUserParams, LoginUserParams, PostCommentParams, PostReplyParams } from '@/@types/data';
+import { AdRewardParams, CreateUserParams, LoginUserParams, PostCommentParams, PostReplyParams, ReactionParams } from '@/@types/data';
 import axios from 'axios';
 
 axios.defaults.withCredentials = false;
@@ -242,6 +242,17 @@ export const postReplyWithMedia = async (
     return response.data;
   } catch (error) {
     console.error('Error posting reply with media:', error);
+    throw error;
+  }
+};
+
+// Add reaction (like/dislike) to a comment or reply
+export const postReaction = async (params: ReactionParams) => {
+  try {
+    const response = await apiClient.post('/api/v1/comments/reaction', params);
+    return response.data;
+  } catch (error) {
+    console.error('Error posting reaction:', error);
     throw error;
   }
 };

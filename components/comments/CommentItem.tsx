@@ -7,6 +7,7 @@ import { Heart, HeartCrack } from "lucide-react";
 import { getRepliesByCommentId, getUserByWorldID } from "@/app/api/service";
 import ReplyItem from "@/components/comments/ReplyItem";
 import websocketService from "@/app/api/websocket";
+import { useCommentReactions } from "@/utils/commentReactions";
 
 interface CommentItemProps {
   id: string;
@@ -46,6 +47,16 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const [loading, setLoading] = useState(false);
   const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   const [userNickname, setUserNickname] = useState<string | null>(null);
+  
+  // Use the comment reactions hook
+  const { 
+    likeCount: currentLikeCount, 
+    dislikeCount: currentDislikeCount,
+    userReaction,
+    isLoading: isReactionLoading,
+    handleLike,
+    handleDislike
+  } = useCommentReactions(id, "Comment", likeCount, dislikeCount);
 
   // Get user data based on worldId
   useEffect(() => {
@@ -200,15 +211,23 @@ const CommentItem: React.FC<CommentItemProps> = ({
             
             {/* Like/Dislike buttons - horizontal layout */}
             <div className="flex items-center">
-              <button className="text-gray-400 hover:text-pink-500">
-                <Heart size={16} className="fill-current" />
+              <button 
+                className={`${userReaction === "Like" ? "text-pink-500" : "text-gray-400"} hover:text-pink-500 ${isReactionLoading ? "opacity-50" : ""}`}
+                onClick={handleLike}
+                disabled={isReactionLoading}
+              >
+                <Heart size={16} className={userReaction === "Like" ? "fill-current" : ""} />
               </button>
-              <span className="text-gray-400 text-xs mx-1">{likeCount}</span>
+              <span className="text-gray-400 text-xs mx-1">{currentLikeCount}</span>
               
-              <button className="text-gray-400 hover:text-red-500 ml-3">
-                <HeartCrack size={16} />
+              <button 
+                className={`${userReaction === "Dislike" ? "text-red-500" : "text-gray-400"} hover:text-red-500 ml-3 ${isReactionLoading ? "opacity-50" : ""}`}
+                onClick={handleDislike}
+                disabled={isReactionLoading}
+              >
+                <HeartCrack size={16} className={userReaction === "Dislike" ? "fill-current" : ""} />
               </button>
-              <span className="text-gray-400 text-xs mx-1">{dislikeCount}</span>
+              <span className="text-gray-400 text-xs mx-1">{currentDislikeCount}</span>
             </div>
           </div>
           
@@ -223,6 +242,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     replies.map((reply) => (
                       <ReplyItem
                         key={reply._id}
+                        _id={reply._id}
                         content={reply.content}
                         username={`User ${reply.worldId.slice(-4)}`} // Use last 4 chars of worldId for better variety
                         worldId={reply.worldId} // Pass the worldId to ReplyItem

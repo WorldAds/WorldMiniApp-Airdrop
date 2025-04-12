@@ -4,8 +4,10 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Heart, HeartCrack } from "lucide-react";
 import { getUserByWorldID } from "@/app/api/service";
+import { useCommentReactions } from "@/utils/commentReactions";
 
 interface ReplyItemProps {
+  _id?: string; // Add optional _id property
   content: string;
   username: string;
   worldId?: string; // Changed from userId to worldId, optional since it's derived from username in CommentItem
@@ -16,6 +18,7 @@ interface ReplyItemProps {
 }
 
 const ReplyItem: React.FC<ReplyItemProps> = ({
+  _id,
   content,
   username,
   worldId,
@@ -26,6 +29,24 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
 }) => {
   const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   const [userNickname, setUserNickname] = useState<string | null>(null);
+  
+  // Use the comment reactions hook for replies
+  const { 
+    likeCount: currentLikeCount, 
+    dislikeCount: currentDislikeCount,
+    userReaction,
+    isLoading: isReactionLoading,
+    handleLike,
+    handleDislike
+  } = useCommentReactions(
+    // We need to ensure we have a valid ID for the reply
+    // If _id is not available, we'll use a combination of worldId and createdAt as a fallback
+    // This is not ideal but should work for the UI demonstration
+    _id || `${worldId}-${new Date(createdAt).getTime()}`,
+    "Reply", 
+    likeCount, 
+    dislikeCount
+  );
 
   // Get user data based on worldId
   useEffect(() => {
@@ -112,15 +133,23 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
             
             {/* Like/Dislike buttons - horizontal layout */}
             <div className="flex items-center">
-              <button className="text-gray-400 hover:text-pink-500">
-                <Heart size={14} className="fill-current" />
+              <button 
+                className={`${userReaction === "Like" ? "text-pink-500" : "text-gray-400"} hover:text-pink-500 ${isReactionLoading ? "opacity-50" : ""}`}
+                onClick={handleLike}
+                disabled={isReactionLoading}
+              >
+                <Heart size={14} className={userReaction === "Like" ? "fill-current" : ""} />
               </button>
-              <span className="text-gray-400 text-xs mx-1">{likeCount}</span>
+              <span className="text-gray-400 text-xs mx-1">{currentLikeCount}</span>
               
-              <button className="text-gray-400 hover:text-red-500 ml-3">
-                <HeartCrack size={14} />
+              <button 
+                className={`${userReaction === "Dislike" ? "text-red-500" : "text-gray-400"} hover:text-red-500 ml-3 ${isReactionLoading ? "opacity-50" : ""}`}
+                onClick={handleDislike}
+                disabled={isReactionLoading}
+              >
+                <HeartCrack size={14} className={userReaction === "Dislike" ? "fill-current" : ""} />
               </button>
-              <span className="text-gray-400 text-xs mx-1">{dislikeCount}</span>
+              <span className="text-gray-400 text-xs mx-1">{currentDislikeCount}</span>
             </div>
           </div>
         </div>
