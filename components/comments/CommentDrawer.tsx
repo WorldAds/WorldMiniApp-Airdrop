@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Comment } from "@/@types/data";
+import { Comment, Reply } from "@/@types/data";
 import { getCommentsByAdvertisementId, getRepliesByCommentId, getAdReactions } from "@/app/api/service";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -99,7 +99,7 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
       const replyData = await getRepliesByCommentId(commentId);
       
       // Process reply data
-      let replies = [];
+      let replies: Reply[] = [];
       if (replyData && typeof replyData === 'object') {
         if ('replies' in replyData && Array.isArray(replyData.replies)) {
           replies = replyData.replies;
@@ -188,7 +188,7 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
           getRepliesByCommentId(comment._id)
             .then(replyData => {
               // Process reply data - the API returns an object with a 'replies' array
-              let replies = [];
+              let replies: Reply[] = [];
               if (replyData && typeof replyData === 'object') {
                 if ('replies' in replyData && Array.isArray(replyData.replies)) {
                   // Standard response format: { replies: [...], total: number, page: number, limit: number }
