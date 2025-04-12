@@ -11,6 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+// 1) Import the MiniKit SDK
+import { MiniKit } from "@worldcoin/minikit-js";
 
 export default function WalletAuthScreen() {
   const router = useRouter();
@@ -19,19 +21,67 @@ export default function WalletAuthScreen() {
   const { data: session } = useSession();
   const { login } = useAuth();
 
-  // Mock data for development
-  const mockWalletAddress = "0x1234567890abcdef1234567890abcdef12345678";
-  const mockWorldId = "mock-world-id";
-
-  // Add the async walletAuth logic to this handler
+  // 2) Add the async walletAuth logic to this handler
   const handleVerifyWallet = async () => {
     try {
+      // Check if MiniKit is installed (i.e., you're in the World App)
+      if (!MiniKit.isInstalled()) {
+        alert("MiniKit not installed (are you in the World App?)");
+        return;
+      }
+
       setIsLoading(true);
 
-      // Use mock data for login
-      try {
-        // Login with our backend using mock data
-        const userData = await login(mockWorldId, mockWalletAddress);
+      // Fetch a nonce from /api/nonce
+      const res = await fetch("/api/nonce", { method: "GET" });
+      if (!res.ok) {
+        throw new Error("Failed to fetch nonce");
+      }
+      const { nonce } = await res.json();
+
+      // Invoke walletAuth command
+      const { finalPayload } = await MiniKit.commandsAsync.walletAuth({
+        nonce,
+        expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        statement: "Authorize this wallet with my World ID",
+      });
+
+      // If the user canceled or there's an error from MiniKit
+      if (finalPayload.status === "error") {
+        console.log("User canceled or error in MiniKit:", finalPayload);
+        setIsLoading(false);
+        return;
+      }
+
+      // Send the signature payload to the server for verification
+      const verifyRes = await fetch("/api/complete-siwe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          payload: finalPayload,
+          nonce,
+        }),
+      });
+
+      if (!verifyRes.ok) {
+        const errorData = await verifyRes.json();
+        throw new Error(errorData.message || "Failed to verify signature");
+      }
+
+      const verifyData = await verifyRes.json();
+      if (verifyData.status === "success") {
+        // Get the wallet address from MiniKit
+        const walletAddress = MiniKit.walletAddress;
+        
+        if (!walletAddress) {
+          alert("Failed to get wallet address");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Login with our backend
+        const userData = await login(session?.user?.id || "", walletAddress);
+        
         if (userData) {
           // Login successful
           // Show the success modal
@@ -40,14 +90,13 @@ export default function WalletAuthScreen() {
           // Login failed
           alert("Login failed. Please try again.");
         }
-      } catch (error) {
-        // Login error
-        alert("Login error. Please try again.");
+      } else {
+        console.warn("Signature invalid or other error:", verifyData);
       }
-
+      
       setIsLoading(false);
     } catch (err: any) {
-      // Wallet Auth error
+      console.error("Wallet Auth error:", err);
       alert(err.message);
       setIsLoading(false);
     }

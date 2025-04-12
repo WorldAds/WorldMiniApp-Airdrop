@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(response);
       return response;
     } catch (error) {
-      // Login error
+      console.error('Login error:', error);
       return null;
     }
   };

@@ -24,27 +24,21 @@ export default function DataCenterScreen() {
   useEffect(() => {
     // If MiniKit is installed, retrieve the wallet address
     if (MiniKit.isInstalled()) {
-      const address = MiniKit.walletAddress;
+      const address = MiniKit.walletAddress; // This is set after a successful walletAuth
       if (address) {
         setWalletAddress(address);
       }
-    } else {
-      // For development, set mock wallet address if MiniKit is not installed
-      setWalletAddress("0x1234567890abcdef1234567890abcdef12345678");
     }
   }, []);
 
-  // Try to login if we have wallet address but no user
+  // Try to login if we have session and wallet address but no user
   useEffect(() => {
     const attemptLogin = async () => {
-      if (!isAuthenticated && walletAddress) {
+      if (!isAuthenticated && session?.user?.id && walletAddress) {
         try {
-          // For development, use mock world ID
-          // In production, you would need to get the World ID from the session or another source
-          const mockWorldId = "mock-world-id";
-          await login(mockWorldId, walletAddress);
+          await login(session.user.id, walletAddress);
         } catch (error) {
-          // Auto-login error
+          console.error("Auto-login error:", error);
         }
       }
     };
