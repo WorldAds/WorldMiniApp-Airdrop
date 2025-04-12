@@ -27,15 +27,15 @@ export default function LoginScreen() {
       const userData = await login(mockWorldId, mockWalletAddress);
       
       if (userData) {
-        console.log("Login successful:", userData);
+        // Login successful
         // Show success modal
         setIsModalOpen(true);
       } else {
-        console.warn("Login failed");
+        // Login failed
         alert("Login failed. Please try again.");
       }
     } catch (error) {
-      console.error("Login error:", error);
+      // Login error
       alert("Login error. Please try again.");
     } finally {
       setIsLoading(false);

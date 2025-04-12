@@ -44,7 +44,7 @@ export default function DataCenterScreen() {
           const mockWorldId = "mock-world-id";
           await login(mockWorldId, walletAddress);
         } catch (error) {
-          console.error("Auto-login error:", error);
+          // Auto-login error
         }
       }
     };

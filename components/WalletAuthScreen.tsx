@@ -33,21 +33,21 @@ export default function WalletAuthScreen() {
         // Login with our backend using mock data
         const userData = await login(mockWorldId, mockWalletAddress);
         if (userData) {
-          console.log("Login successful:", userData);
+          // Login successful
           // Show the success modal
           setIsModalOpen(true);
         } else {
-          console.warn("Login failed");
+          // Login failed
           alert("Login failed. Please try again.");
         }
       } catch (error) {
-        console.error("Login error:", error);
+        // Login error
         alert("Login error. Please try again.");
       }
 
       setIsLoading(false);
     } catch (err: any) {
-      console.error("Wallet Auth error:", err);
+      // Wallet Auth error
       alert(err.message);
       setIsLoading(false);
     }

@@ -7,11 +7,9 @@ export default function MiniKitProvider({ children }: { children: ReactNode }) {
   const appId = process.env.NEXT_PUBLIC_APP_ID;
   useEffect(() => {
     if (MiniKit.install(appId || "")) {
-      console.log("MiniKit is installed inside the World App.");
+      // MiniKit is installed inside the World App
     } else {
-      console.log(
-        "MiniKit is not installed. You may be outside the World App."
-      );
+      // MiniKit is not installed. You may be outside the World App
     }
   }, []);
 

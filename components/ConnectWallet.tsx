@@ -44,27 +44,27 @@ const ConnectWallet = () => {
       // 4. Retrieve connected account(s)
       const accounts = await ethersProvider.listAccounts();
       if (accounts.length === 0) {
-        console.log("No accounts found");
+        // No accounts found
         return;
       }
       const userAddress = accounts[0];
-      console.log("Connected address:", userAddress);
+      // Connected address
 
       setAddress(userAddress);
       setWcProvider(provider);
 
       // (Optional) You could also listen for disconnect or account change:
       provider.on("disconnect", () => {
-        console.log("Wallet disconnected");
+        // Wallet disconnected
         setAddress(null);
       });
 
       provider.on("accountsChanged", (newAccounts: string[]) => {
-        console.log("Accounts changed:", newAccounts);
+        // Accounts changed
         setAddress(newAccounts[0] || null);
       });
     } catch (error) {
-      console.error("WalletConnect V2 connection error:", error);
+      // WalletConnect V2 connection error
     }
   };
 
@@ -75,10 +75,10 @@ const ConnectWallet = () => {
       const signer = ethersProvider.getSigner();
       const message = "Hello from Next.js + WalletConnect v2!";
       const signature = await signer.signMessage(message);
-      console.log("Signature:", signature);
+      // Signature received
       alert(`Signature:\n${signature}`);
     } catch (error) {
-      console.error("Sign message error:", error);
+      // Sign message error
     }
   };
 

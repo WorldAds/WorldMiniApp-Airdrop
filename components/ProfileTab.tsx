@@ -67,7 +67,7 @@ export default function ProfileTab({ user }: ProfileTabProps) {
         setUploadError("Failed to update avatar");
       }
     } catch (error) {
-      console.error("Error uploading avatar:", error);
+      // Error uploading avatar
       setUploadError("An error occurred while uploading");
     } finally {
       setIsUploading(false);

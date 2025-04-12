@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(response);
       return response;
     } catch (error) {
-      console.error('Login error:', error);
+      // Login error
       return null;
     }
   };
@@ -72,12 +72,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await login(mockWorldId, walletAddress);
         }
       } catch (error) {
-        console.error('Error fetching user by World ID:', error);
+        // Error fetching user by World ID
         // Try to login (which will create the user if needed)
         await login(mockWorldId, walletAddress);
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      // Error fetching user data
     } finally {
       setIsLoading(false);
     }
@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateAvatar = async (file: File) => {
     if (!user) {
-      console.error('Cannot update avatar: No user logged in');
+      // Cannot update avatar: No user logged in
       return false;
     }
 
@@ -103,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       return true;
     } catch (error) {
-      console.error('Error updating avatar:', error);
+      // Error updating avatar
       return false;
     }
   };
