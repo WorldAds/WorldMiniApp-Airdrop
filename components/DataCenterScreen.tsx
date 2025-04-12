@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-// Removed avatar and WorldID components
 import DataTab from "./DataTab";
 import BalanceTab from "./BalanceTab";
 import ProfileTab from "./ProfileTab";
@@ -11,6 +10,7 @@ import Footer from "./Footer";
 import { MiniKit } from "@worldcoin/minikit-js";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSession } from "next-auth/react";
+import UserAvatar from "./UserAvatar";
 
 export default function DataCenterScreen() {
   const router = useRouter();
@@ -57,7 +57,7 @@ export default function DataCenterScreen() {
       {/* Header */}
       <header className="p-4 flex items-center">
         <button
-          onClick={() => router.replace('/ads')}
+          onClick={() => router.replace("/ads")}
           className="text-white hover:opacity-80 transition-opacity"
         >
           <ArrowLeft className="w-6 h-6" />
@@ -65,8 +65,12 @@ export default function DataCenterScreen() {
         <h2 className="flex-1 text-center text-lg font-medium">Data Center</h2>
       </header>
 
+      <div className="flex flex-col items-center pt-8">
+        <UserAvatar />
+      </div>
+
       {/* Main Content */}
-      <main className="flex flex-col items-center px-4 pt-8">
+      <main className="flex flex-col items-center px-4">
         {/* Tabs */}
         <div className="flex gap-4 mt-8 mb-4 relative">
           {["Data", "Balance", "Profile"].map((tab) => (

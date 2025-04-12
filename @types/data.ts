@@ -35,7 +35,7 @@ export interface LoginUserParams {
 export interface Comment{
   _id: string;
   advertisementId: string;
-  userId: string;
+  worldId: string; // Changed from userId to worldId
   content: string;
   commentType: string;
   mediaUrl: string;
@@ -49,7 +49,7 @@ export interface Comment{
 export interface Reply{
   _id: string;
   commentId: string;
-  userId: string;
+  worldId: string; // Changed from userId to worldId
   content: string;
   commentType: string;
   mediaUrl: string;
@@ -65,6 +65,7 @@ export interface PostCommentParams{
   content:string;
   commentType:string;
   mediaUrl: string;
+  worldId:string;
 }
 
 export interface PostReplyParams{
@@ -72,4 +73,6 @@ export interface PostReplyParams{
   content:string;
   commentType:string;
   mediaUrl: string;
+  worldId:string;
+  advertisementId?: string; // Add optional advertisementId to ensure it's included in the reply
 }

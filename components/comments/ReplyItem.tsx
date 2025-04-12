@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Heart, HeartCrack } from "lucide-react";
+import { getUserByWorldID } from "@/app/api/service";
 
 interface ReplyItemProps {
   content: string;
   username: string;
-  userId?: string; // Added userId field, optional since it's derived from username in CommentItem
+  worldId?: string; // Changed from userId to worldId, optional since it's derived from username in CommentItem
   createdAt: string;
   likeCount: number;
   dislikeCount: number;
@@ -17,22 +18,37 @@ interface ReplyItemProps {
 const ReplyItem: React.FC<ReplyItemProps> = ({
   content,
   username,
-  userId,
+  worldId,
   createdAt,
   likeCount,
   dislikeCount,
   mediaUrl,
 }) => {
   const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
+  const [userNickname, setUserNickname] = useState<string | null>(null);
 
-  // Construct avatar URL based on userId
+  // Get user data based on worldId
   useEffect(() => {
-    if (userId) {
-      // Assuming the avatar URL follows a pattern like /uploads/avatars/{userId}.png
-      const avatarUrl = `/uploads/avatars/${userId}.png`;
-      setUserAvatarUrl(avatarUrl);
-    }
-  }, [userId]);
+    const fetchUserData = async () => {
+      if (worldId) {
+        try {
+          const userData = await getUserByWorldID(worldId);
+          if (userData) {
+            if (userData.avatarUrl) {
+              setUserAvatarUrl(userData.avatarUrl);
+            }
+            if (userData.nickname) {
+              setUserNickname(userData.nickname);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+        }
+      }
+    };
+    
+    fetchUserData();
+  }, [worldId]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -40,7 +56,8 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
   };
 
   return (
-    <div className="py-2 border-b border-gray-700">
+    <div className="py-2">
+      {/* Simplified styling with just indentation, no connecting lines */}
       <div className="flex items-start">
         {/* User avatar - left side */}
         <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#AC54F1] to-[#EB489A] p-1 mr-3">
@@ -63,12 +80,19 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
         <div className="flex-1 flex flex-col">
           {/* Layer 1: Username */}
           <div className="flex items-center">
-            <span className="font-semibold text-white text-sm">{username}</span>
+            <span className="font-semibold text-white text-sm">{userNickname || username}</span>
           </div>
           
           {/* Layer 2: Reply content and media */}
           <div className="mt-1">
-            <p className="text-white text-sm">{content}</p>
+            {/* For Emoticon type replies, display the emoji larger */}
+            {content && content.length <= 2 && (
+              <p className="text-white text-3xl">{content}</p>
+            )}
+            {/* For regular text replies */}
+            {content && content.length > 2 && (
+              <p className="text-white text-sm">{content}</p>
+            )}
             
             {/* Display media if available */}
             {mediaUrl && mediaUrl.trim() !== "" && (

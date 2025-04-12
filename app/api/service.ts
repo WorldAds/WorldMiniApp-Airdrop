@@ -154,7 +154,8 @@ export const postCommentWithMedia = async (
   advertisementId: string,
   content: string,
   commentType: string,
-  mediaFile: File
+  mediaFile: File,
+  worldId?: string
 ) => {
   try {
     const formData = new FormData();
@@ -162,6 +163,11 @@ export const postCommentWithMedia = async (
     formData.append('content', content);
     formData.append('commentType', commentType);
     formData.append('media', mediaFile); // Changed back to 'media' based on backend error
+    
+    // Add worldId if provided
+    if (worldId) {
+      formData.append('worldId', worldId);
+    }
 
     const response = await apiClient.post('/api/v1/comments/with-media', formData, {
       headers: {
@@ -182,7 +188,7 @@ export const getRepliesByCommentId = async (
   limit: number = 10
 ) => {
   try {
-    const response = await apiClient.get(`/api/v1/comments/reply/${commentId}`, {
+    const response = await apiClient.get(`/api/v1/comments/reply/comment/${commentId}`, {
       params: { page, limit }
     });
     return response.data;
@@ -206,7 +212,9 @@ export const postReplyWithMedia = async (
   commentId: string,
   content: string,
   commentType: string,
-  mediaFile: File
+  mediaFile: File,
+  worldId?: string,
+  advertisementId?: string
 ) => {
   try {
     const formData = new FormData();
@@ -214,6 +222,16 @@ export const postReplyWithMedia = async (
     formData.append('content', content);
     formData.append('commentType', commentType);
     formData.append('media', mediaFile); // Changed back to 'media' based on backend error
+    
+    // Add worldId if provided
+    if (worldId) {
+      formData.append('worldId', worldId);
+    }
+    
+    // Add advertisementId if provided
+    if (advertisementId) {
+      formData.append('advertisementId', advertisementId);
+    }
 
     const response = await apiClient.post('/api/v1/comments/reply/with-media', formData, {
       headers: {

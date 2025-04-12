@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Comment } from "@/@types/data";
-import { getCommentsByAdvertisementId } from "@/app/api/service";
+import { getCommentsByAdvertisementId, getRepliesByCommentId } from "@/app/api/service";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { 
@@ -66,16 +66,45 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
       });
       
       // Subscribe to new replies
-      const unsubscribeNewReply = websocketService.subscribe('new_reply', (data) => {
+      const unsubscribeNewReply = websocketService.subscribe('new_reply', async (data) => {
+        console.log('Received new reply via WebSocket:', data);
+        
         if (data.advertisementId === adId) {
-          // Update the comment with the new reply count
-          setComments(prevComments => 
-            prevComments.map(comment => 
-              comment._id === data.commentId 
-                ? { ...comment, replyCount: comment.replyCount + 1 } 
-                : comment
-            )
-          );
+          console.log(`New reply for comment ${data.commentId} in ad ${adId}`);
+          
+          // Instead of adding the reply directly, refetch all replies for this comment
+          try {
+            const replyData = await getRepliesByCommentId(data.commentId);
+            
+            // Process reply data
+            let fetchedReplies = [];
+            if (replyData && typeof replyData === 'object') {
+              if ('replies' in replyData && Array.isArray(replyData.replies)) {
+                fetchedReplies = replyData.replies;
+              } else if (Array.isArray(replyData)) {
+                fetchedReplies = replyData;
+              }
+            }
+            
+            console.log(`Fetched ${fetchedReplies.length} replies for comment ${data.commentId} after new reply`);
+            
+            // Update the comment with the fetched replies
+            setComments(prevComments => {
+              const updatedComments = prevComments.map(comment => {
+                if (comment._id === data.commentId) {
+                  return { 
+                    ...comment, 
+                    replies: fetchedReplies
+                  };
+                }
+                return comment;
+              });
+              
+              return updatedComments;
+            });
+          } catch (error) {
+            console.error(`Error fetching replies for comment ${data.commentId}:`, error);
+          }
         }
       });
       
@@ -99,15 +128,77 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
     try {
       const data = await getCommentsByAdvertisementId(adId);
       
+      let commentsData: Comment[] = [];
+      
       // Check if the response has a comments property (matches the API response structure)
       if (data && typeof data === 'object' && 'comments' in data && Array.isArray(data.comments)) {
-        setComments(data.comments);
+        commentsData = data.comments;
       } else if (Array.isArray(data)) {
         // Fallback for direct array response
-        setComments(data);
-      } else {
-        // If the API returns an unexpected format, use an empty array
-        setComments([]);
+        commentsData = data;
+      }
+      
+      // Set comments first
+      setComments(commentsData);
+      
+      // Then fetch replies for each comment
+      if (commentsData.length > 0) {
+        // Fetch replies for all comments, not just those with replyCount > 0
+        // since the backend might not be setting replyCount correctly
+        const commentsWithReplies = commentsData;
+
+        // Create an array of promises for fetching replies
+        const replyPromises = commentsWithReplies.map(comment => 
+          getRepliesByCommentId(comment._id)
+            .then(replyData => {
+              // Process reply data - the API returns an object with a 'replies' array
+              let replies = [];
+              if (replyData && typeof replyData === 'object') {
+                if ('replies' in replyData && Array.isArray(replyData.replies)) {
+                  // Standard response format: { replies: [...], total: number, page: number, limit: number }
+                  replies = replyData.replies;
+                } else if (Array.isArray(replyData)) {
+                  // Fallback if the API returns an array directly
+                  replies = replyData;
+                }
+              }
+              
+              // Return the comment ID and its replies
+              return { commentId: comment._id, replies };
+            })
+            .catch(error => {
+              console.error(`Error fetching replies for comment ${comment._id}:`, error);
+              return { commentId: comment._id, replies: [] };
+            })
+        );
+        
+        // Wait for all reply fetches to complete
+        const repliesResults = await Promise.all(replyPromises);
+        
+        // Log the results to help debug
+        repliesResults.forEach(result => {
+          console.log(`Comment ${result.commentId} has ${result.replies.length} replies`);
+        });
+        
+        // Update the comments with their replies
+        setComments(prevComments => {
+          const updatedComments = prevComments.map(comment => {
+            // Find the replies for this comment
+            const replyResult = repliesResults.find(result => result.commentId === comment._id);
+            
+            // If we found replies for this comment, add a replies property
+            if (replyResult && replyResult.replies.length > 0) {
+              console.log(`Adding ${replyResult.replies.length} replies to comment ${comment._id}`);
+              return { ...comment, replies: replyResult.replies };
+            }
+            
+            // Otherwise, return the comment with an empty replies array
+            return { ...comment, replies: [] };
+          });
+          
+          console.log(`Updated ${updatedComments.length} comments with replies`);
+          return updatedComments;
+        });
       }
     } catch (error: any) {
       console.error("Error fetching comments:", error);
@@ -170,13 +261,15 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
                       key={comment._id}
                       id={comment._id}
                       content={comment.content}
-                      username={`User ${comment.userId.slice(-4)}`} // Use last 4 chars of userId for better variety
+                      username={`User ${comment.worldId.slice(-4)}`} // We'll fetch the actual nickname in CommentItem
+                      worldId={comment.worldId} // Pass the worldId to CommentItem
                       createdAt={comment.createdAt}
                       likeCount={comment.likeCount}
                       dislikeCount={comment.dislikeCount}
                       replyCount={comment.replyCount}
                       mediaUrl={comment.mediaUrl}
                       onReplyClick={handleReplyClick}
+                      replies={(comment as any).replies} // Pass the replies if they exist
                     />
             ))
           )}

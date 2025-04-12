@@ -2,11 +2,13 @@
 
 import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Image, X } from "lucide-react";
+import { Send, Image, X, Smile } from "lucide-react";
+import EmojiPicker from "emoji-picker-react";
 import { postComment, postReply, postCommentWithMedia, postReplyWithMedia } from "@/app/api/service";
 import { useAuth } from "@/contexts/AuthContext";
 import { Comment } from "@/@types/data";
 import websocketService from "@/app/api/websocket";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface CommentInputProps {
   adId: string;
@@ -64,6 +66,11 @@ const CommentInput: React.FC<CommentInputProps> = ({
     }
   };
 
+  const handleEmojiClick = (emojiData: any) => {
+    // Add emoji to the current content
+    setContent(prev => prev + emojiData.emoji);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -74,6 +81,14 @@ const CommentInput: React.FC<CommentInputProps> = ({
     
     try {
       let response;
+      let commentType = "Text";
+      
+      // Check if content is a single emoji (or two emoji characters)
+      // Simple emoji detection - check if content is short and contains non-alphanumeric characters
+      const isEmoticon = content.trim().length <= 2 && !/^[a-zA-Z0-9\s]+$/.test(content);
+      if (isEmoticon) {
+        commentType = "Emoticon";
+      }
       
       if (replyToCommentId) {
         // This is a reply to a comment
@@ -83,8 +98,10 @@ const CommentInput: React.FC<CommentInputProps> = ({
             response = await postReplyWithMedia(
               replyToCommentId,
               content,
-              "Image", // Changed from "image" to "Image" to match the expected enum values
-              selectedImage
+              "Image",
+              selectedImage,
+              user.worldId,
+              adId // Pass the advertisementId
             );
           } catch (error: any) {
             console.error("Error posting reply with media:", error);
@@ -93,8 +110,10 @@ const CommentInput: React.FC<CommentInputProps> = ({
               const replyData = {
                 commentId: replyToCommentId,
                 content,
-                commentType: "Text", // Changed from "text" to "Text" to match the expected enum values
+                commentType,
                 mediaUrl: "",
+                worldId: user.worldId,
+                advertisementId: adId, // Add advertisementId here too
               };
               
               response = await postReply(replyData);
@@ -104,23 +123,30 @@ const CommentInput: React.FC<CommentInputProps> = ({
             }
           }
         } else {
-          // Text-only reply
+          // Text-only reply (including emoji)
           const replyData = {
             commentId: replyToCommentId,
             content,
-            commentType: "Text", // Changed from "text" to "Text" to match the expected enum values
+            commentType,
             mediaUrl: "",
+            worldId: user.worldId,
+            advertisementId: adId, // Add advertisementId to ensure it's included in the reply
           };
           
           response = await postReply(replyData);
         }
         
+        // Instead of using the response directly, we'll let the parent component
+        // handle refreshing the data to ensure replies are displayed in the correct order
+        
         // Notify via WebSocket (backend will also broadcast this)
-        websocketService.send('new_reply', {
+        const replyData = {
           ...response,
           advertisementId: adId,
           commentId: replyToCommentId
-        });
+        };
+        console.log('Sending new reply via WebSocket:', replyData);
+        websocketService.send('new_reply', replyData);
       } else {
         // This is a new comment on the ad
         if (selectedImage) {
@@ -129,8 +155,9 @@ const CommentInput: React.FC<CommentInputProps> = ({
             response = await postCommentWithMedia(
               adId,
               content,
-              "Image", // Changed from "image" to "Image" to match the expected enum values
-              selectedImage
+              "Image",
+              selectedImage,
+              user.worldId
             );
           } catch (error: any) {
             console.error("Error posting comment with media:", error);
@@ -139,8 +166,9 @@ const CommentInput: React.FC<CommentInputProps> = ({
               const commentData = {
                 advertisementId: adId,
                 content,
-                commentType: "Text", // Changed from "text" to "Text" to match the expected enum values
+                commentType,
                 mediaUrl: "",
+                worldId: user.worldId,
               };
               
               response = await postComment(commentData);
@@ -150,12 +178,13 @@ const CommentInput: React.FC<CommentInputProps> = ({
             }
           }
         } else {
-          // Text-only comment
+          // Text-only comment (including emoji)
           const commentData = {
             advertisementId: adId,
             content,
-            commentType: "Text", // Changed from "text" to "Text" to match the expected enum values
+            commentType,
             mediaUrl: "",
+            worldId: user.worldId,
           };
           
           response = await postComment(commentData);
@@ -240,6 +269,28 @@ const CommentInput: React.FC<CommentInputProps> = ({
           className="hidden"
           id="image-upload"
         />
+        
+        {/* Emoji picker button */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="ml-2 text-gray-400 hover:text-yellow-500"
+              disabled={isSubmitting}
+            >
+              <Smile size={20} />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-full p-0 border-none" align="end">
+            <EmojiPicker
+              onEmojiClick={handleEmojiClick}
+              width="100%"
+              height="350px"
+            />
+          </PopoverContent>
+        </Popover>
         
         {/* Image upload button */}
         <Button
