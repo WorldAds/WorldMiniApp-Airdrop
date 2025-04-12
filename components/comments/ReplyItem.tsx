@@ -143,7 +143,7 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
               <span className="text-gray-400 text-xs mx-1">{currentLikeCount}</span>
               
               <button 
-                className={`${userReaction === "Dislike" ? "text-red-500" : "text-gray-400"} hover:text-red-500 ml-3 ${isReactionLoading ? "opacity-50" : ""}`}
+                className={`${userReaction === "Dislike" ? "text-gray-400" : "text-gray-400"} hover:text-gray-300 ml-3 ${isReactionLoading ? "opacity-50" : ""}`}
                 onClick={handleDislike}
                 disabled={isReactionLoading}
               >

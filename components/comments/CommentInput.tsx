@@ -136,15 +136,15 @@ const CommentInput: React.FC<CommentInputProps> = ({
           response = await postReply(replyData);
         }
         
-        // Instead of using the response directly, we'll let the parent component
-        // handle refreshing the data to ensure replies are displayed in the correct order
-        
-        // Notify via WebSocket (backend will also broadcast this)
+        // Ensure the response has all the necessary fields for WebSocket
         const replyData = {
           ...response,
           advertisementId: adId,
           commentId: replyToCommentId
         };
+        
+        // Send only once via WebSocket - the backend will broadcast to all clients
+        // and the parent component will handle the UI update
         console.log('Sending new reply via WebSocket:', replyData);
         websocketService.send('new_reply', replyData);
       } else {

@@ -28,39 +28,54 @@ export const useCommentReactions = (
 
     setIsLoading(true);
 
+    // Store previous state to revert in case of error
+    const previousUserReaction = userReaction;
+    const previousLikeCount = likeCount;
+    const previousDislikeCount = dislikeCount;
+
     try {
+      // Calculate new state based on current state and action
+      let newUserReaction: "Like" | "Dislike" | null = null;
+      let newLikeCount = likeCount;
+      let newDislikeCount = dislikeCount;
+
       // If user already reacted with the same reaction, remove it
       if (userReaction === reactionType) {
-        // Remove the reaction (API doesn't support this yet, so we just update UI)
+        // Remove the reaction
+        newUserReaction = null;
         if (reactionType === "Like") {
-          setLikeCount(prev => Math.max(0, prev - 1));
+          newLikeCount = Math.max(0, likeCount - 1);
         } else {
-          setDislikeCount(prev => Math.max(0, prev - 1));
+          newDislikeCount = Math.max(0, dislikeCount - 1);
         }
-        setUserReaction(null);
       } 
       // If user already reacted with the opposite reaction, switch it
       else if (userReaction !== null) {
         // Switch from one reaction to another
+        newUserReaction = reactionType;
         if (reactionType === "Like") {
-          setLikeCount(prev => prev + 1);
-          setDislikeCount(prev => Math.max(0, prev - 1));
+          newLikeCount = likeCount + 1;
+          newDislikeCount = Math.max(0, dislikeCount - 1);
         } else {
-          setDislikeCount(prev => prev + 1);
-          setLikeCount(prev => Math.max(0, prev - 1));
+          newDislikeCount = dislikeCount + 1;
+          newLikeCount = Math.max(0, likeCount - 1);
         }
-        setUserReaction(reactionType);
       } 
       // If user hasn't reacted yet, add the reaction
       else {
         // Add new reaction
+        newUserReaction = reactionType;
         if (reactionType === "Like") {
-          setLikeCount(prev => prev + 1);
+          newLikeCount = likeCount + 1;
         } else {
-          setDislikeCount(prev => prev + 1);
+          newDislikeCount = dislikeCount + 1;
         }
-        setUserReaction(reactionType);
       }
+
+      // Update UI state first (optimistic update)
+      setUserReaction(newUserReaction);
+      setLikeCount(newLikeCount);
+      setDislikeCount(newDislikeCount);
 
       // Call the API to update the reaction
       await postReaction({
@@ -72,10 +87,10 @@ export const useCommentReactions = (
     } catch (error) {
       console.error("Error handling reaction:", error);
       // Revert UI changes on error
-      setLikeCount(initialLikeCount);
-      setDislikeCount(initialDislikeCount);
-      setUserReaction(initialUserReaction || null);
-      alert("Failed to update reaction. Please try again.");
+      setUserReaction(previousUserReaction);
+      setLikeCount(previousLikeCount);
+      setDislikeCount(previousDislikeCount);
+      console.error("Failed to update reaction. Please try again.");
     } finally {
       setIsLoading(false);
     }

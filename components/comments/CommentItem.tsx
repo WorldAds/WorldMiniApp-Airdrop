@@ -47,6 +47,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const [loading, setLoading] = useState(false);
   const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   const [userNickname, setUserNickname] = useState<string | null>(null);
+  const [repliesExpanded, setRepliesExpanded] = useState(false); // Track if replies are expanded
   
   // Use the comment reactions hook
   const { 
@@ -81,36 +82,16 @@ const CommentItem: React.FC<CommentItemProps> = ({
     fetchUserData();
   }, [worldId]);
 
-  // Subscribe to new replies for this comment
+  // Update replies when initialReplies changes
   useEffect(() => {
-    // Connect to WebSocket if not already connected
-    websocketService.connect().catch(error => {
-      console.error("Failed to connect to WebSocket:", error);
-    });
-    
-    // Subscribe to new replies for this comment
-    const unsubscribeNewReply = websocketService.subscribe('new_reply', (data) => {
-      if (data.commentId === id) {
-        // Add the new reply to the list
-        setReplies(prevReplies => [data, ...prevReplies]);
-      }
-    });
-    
-    return () => {
-      unsubscribeNewReply();
-    };
-  }, [id]);
-  
-  // Update replies when initialReplies changes or fetch them if not provided
-  useEffect(() => {
-    if (initialReplies && initialReplies.length > 0) {
+    if (initialReplies) {
       setReplies(initialReplies);
       console.log(`Loaded ${initialReplies.length} replies for comment ${id}`);
-    } else {
-      // Always fetch replies for each comment
+    } else if (replies.length === 0) {
+      // Only fetch replies if we don't have any yet
       fetchReplies();
     }
-  }, [initialReplies, id]); // Removed fetchReplies from dependencies to avoid lint errors
+  }, [initialReplies, id]); // Removed fetchReplies and replies from dependencies to avoid unnecessary re-renders
 
   // Fetch replies for this comment
   const fetchReplies = async () => {
@@ -221,7 +202,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               <span className="text-gray-400 text-xs mx-1">{currentLikeCount}</span>
               
               <button 
-                className={`${userReaction === "Dislike" ? "text-red-500" : "text-gray-400"} hover:text-red-500 ml-3 ${isReactionLoading ? "opacity-50" : ""}`}
+                className={`${userReaction === "Dislike" ? "text-gray-400" : "text-gray-400"} hover:text-gray-300 ml-3 ${isReactionLoading ? "opacity-50" : ""}`}
                 onClick={handleDislike}
                 disabled={isReactionLoading}
               >
@@ -231,30 +212,58 @@ const CommentItem: React.FC<CommentItemProps> = ({
             </div>
           </div>
           
-          {/* Layer 4: Always display replies section */}
-          {(loading || replies.length > 0) && (
+          {/* Layer 4: Collapsible replies section */}
+          {(loading || replies.length > 0 || initialReplyCount > 0) && (
             <div className="mt-2">
               {loading ? (
                 <p className="text-gray-400 text-sm">Loading replies...</p>
               ) : (
                 <div className="mt-2">
-                  {replies.length > 0 ? (
-                    replies.map((reply) => (
-                      <ReplyItem
-                        key={reply._id}
-                        _id={reply._id}
-                        content={reply.content}
-                        username={`User ${reply.worldId.slice(-4)}`} // Use last 4 chars of worldId for better variety
-                        worldId={reply.worldId} // Pass the worldId to ReplyItem
-                        createdAt={reply.createdAt}
-                        likeCount={reply.likeCount}
-                        dislikeCount={reply.dislikeCount}
-                        mediaUrl={reply.mediaUrl}
-                      />
-                    ))
-                  ) : (
-                    <p className="text-gray-400 text-sm">No replies yet</p>
+                  {/* Toggle button for replies - use actual replyCount from API or replies.length */}
+                  {(replies.length > 0 || initialReplyCount > 0) && (
+                    <button 
+                      onClick={() => {
+                        // If replies aren't loaded yet but replyCount > 0, fetch them when expanding
+                        if (initialReplyCount > 0 && replies.length === 0 && !loading) {
+                          fetchReplies();
+                        }
+                        setRepliesExpanded(!repliesExpanded);
+                      }}
+                      className="text-blue-400 text-xs hover:text-blue-300 mb-2 flex items-center"
+                    >
+                      {repliesExpanded ? 'Hide' : 'Show'} {replies.length > 0 ? replies.length : initialReplyCount} {(replies.length === 1 || initialReplyCount === 1) ? 'reply' : 'replies'}
+                      <svg 
+                        className={`ml-1 w-3 h-3 transition-transform ${repliesExpanded ? 'rotate-180' : ''}`} 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24" 
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                      </svg>
+                    </button>
                   )}
+                  
+                  {/* Show replies only when expanded */}
+                  {repliesExpanded && replies.length > 0 ? (
+                    <div className="pl-2">
+                      {replies.map((reply) => (
+                        <ReplyItem
+                          key={reply._id}
+                          _id={reply._id}
+                          content={reply.content}
+                          username={`User ${reply.worldId.slice(-4)}`} // Use last 4 chars of worldId for better variety
+                          worldId={reply.worldId} // Pass the worldId to ReplyItem
+                          createdAt={reply.createdAt}
+                          likeCount={reply.likeCount}
+                          dislikeCount={reply.dislikeCount}
+                          mediaUrl={reply.mediaUrl}
+                        />
+                      ))}
+                    </div>
+                  ) : replies.length === 0 && !repliesExpanded ? (
+                    <p className="text-gray-400 text-xs">No replies yet</p>
+                  ) : null}
                 </div>
               )}
             </div>

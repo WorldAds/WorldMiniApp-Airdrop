@@ -43,7 +43,8 @@ export interface Comment{
   updatedAt: string;
   likeCount: number;
   dislikeCount: number;
-  replyCount: number
+  replyCount: number;
+  replies?: Reply[]; // Add optional replies property for frontend use
 }
 
 export interface Reply{

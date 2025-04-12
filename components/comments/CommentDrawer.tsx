@@ -65,46 +65,30 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
         }
       });
       
-      // Subscribe to new replies
-      const unsubscribeNewReply = websocketService.subscribe('new_reply', async (data) => {
-        console.log('Received new reply via WebSocket:', data);
-        
+      // Subscribe to new replies - optimized to avoid refetching all replies
+      const unsubscribeNewReply = websocketService.subscribe('new_reply', (data) => {
         if (data.advertisementId === adId) {
           console.log(`New reply for comment ${data.commentId} in ad ${adId}`);
           
-          // Instead of adding the reply directly, refetch all replies for this comment
-          try {
-            const replyData = await getRepliesByCommentId(data.commentId);
-            
-            // Process reply data
-            let fetchedReplies = [];
-            if (replyData && typeof replyData === 'object') {
-              if ('replies' in replyData && Array.isArray(replyData.replies)) {
-                fetchedReplies = replyData.replies;
-              } else if (Array.isArray(replyData)) {
-                fetchedReplies = replyData;
+          // Directly add the new reply to the appropriate comment
+          setComments(prevComments => {
+            const updatedComments = prevComments.map(comment => {
+              if (comment._id === data.commentId) {
+                // Add the new reply to the existing replies array
+                const currentReplies = comment.replies || [];
+                
+                // Update the comment with the new reply and increment replyCount
+                return { 
+                  ...comment, 
+                  replies: [data, ...currentReplies],
+                  replyCount: (comment.replyCount || 0) + 1
+                };
               }
-            }
-            
-            console.log(`Fetched ${fetchedReplies.length} replies for comment ${data.commentId} after new reply`);
-            
-            // Update the comment with the fetched replies
-            setComments(prevComments => {
-              const updatedComments = prevComments.map(comment => {
-                if (comment._id === data.commentId) {
-                  return { 
-                    ...comment, 
-                    replies: fetchedReplies
-                  };
-                }
-                return comment;
-              });
-              
-              return updatedComments;
+              return comment;
             });
-          } catch (error) {
-            console.error(`Error fetching replies for comment ${data.commentId}:`, error);
-          }
+            
+            return updatedComments;
+          });
         }
       });
       
