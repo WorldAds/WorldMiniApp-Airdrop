@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { postReaction } from "@/app/api/service";
+import { postReaction, deleteReaction } from "@/app/api/service";
 import { useState } from "react";
 
 // Custom hook for handling comment and reply reactions
@@ -78,12 +78,23 @@ export const useCommentReactions = (
       setDislikeCount(newDislikeCount);
 
       // Call the API to update the reaction
-      await postReaction({
-        targetId: id,
-        targetType: targetType,
-        worldId: user.worldId,
-        reactionType: reactionType
-      });
+      if (userReaction !== null && userReaction !== reactionType) {
+        // If switching reactions, first delete the existing reaction
+        await deleteReaction(id, targetType, user.worldId);
+      }
+      
+      if (newUserReaction === null) {
+        // If removing a reaction, call the delete endpoint
+        await deleteReaction(id, targetType, user.worldId);
+      } else {
+        // If adding or changing a reaction, call the post endpoint
+        await postReaction({
+          targetId: id,
+          targetType: targetType,
+          worldId: user.worldId,
+          reactionType: newUserReaction
+        });
+      }
     } catch (error) {
       console.error("Error handling reaction:", error);
       // Revert UI changes on error

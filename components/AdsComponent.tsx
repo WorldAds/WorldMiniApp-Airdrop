@@ -34,11 +34,19 @@ export default function AdsComponent() {
   const [activeIndex, setActiveIndex] = useState(0);
   const swiperRef = useRef<SwiperType | null>(null);
   const [completedAds, setCompletedAds] = useState<Record<string, boolean>>({});
-  const [showVideoReward, setShowVideoReward] = useState<Record<string, boolean>>({});
-  const [showHtmlReward, setShowHtmlReward] = useState<Record<string, boolean>>({});
-  const [showImageReward, setShowImageReward] = useState<Record<string, boolean>>({});
+  const [showVideoReward, setShowVideoReward] = useState<
+    Record<string, boolean>
+  >({});
+  const [showHtmlReward, setShowHtmlReward] = useState<Record<string, boolean>>(
+    {}
+  );
+  const [showImageReward, setShowImageReward] = useState<
+    Record<string, boolean>
+  >({});
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const [viewStartTime, setViewStartTime] = useState<Record<string, number>>({});
+  const [viewStartTime, setViewStartTime] = useState<Record<string, number>>(
+    {}
+  );
   const currentVideoRef = useRef<string | null>(null);
   const [userRewards, setUserRewards] = useState<string[]>([]);
   const [txStatus, setTxStatus] = useState<Record<string, string>>({});
@@ -79,56 +87,60 @@ export default function AdsComponent() {
   }, []);
 
   // Handle ad content completion
-  const handleContentComplete = useCallback(async (adId: string) => {
-    // Check if this ad has already been rewarded
-    if (userRewards.includes(adId)) {
-      // Ad already rewarded, skipping reward
-      return;
-    }
+  const handleContentComplete = useCallback(
+    async (adId: string) => {
+      // Check if this ad has already been rewarded
+      if (userRewards.includes(adId)) {
+        // Ad already rewarded, skipping reward
+        return;
+      }
 
-    // Mark ad as completed
-    setCompletedAds((prev) => {
-      if (prev[adId]) return prev;
-      return { ...prev, [adId]: true };
-    });
+      // Mark ad as completed
+      setCompletedAds((prev) => {
+        if (prev[adId]) return prev;
+        return { ...prev, [adId]: true };
+      });
 
-    // Get current ad
-    const currentAd = ads.find((ad) => ad._id === adId);
-    if (!currentAd) return;
+      // Get current ad
+      const currentAd = ads.find((ad) => ad._id === adId);
+      if (!currentAd) return;
 
-    // Record ad completion
-    // Ad completed
+      // Record ad completion
+      // Ad completed
 
-    try {
-      // Send transaction
-      await sendRewardTransaction(adId);
-      
-    // Set reward animation based on ad type
-    const creativeURL = currentAd.creativeURL || '';
-    const creativeType = currentAd.creativeType || '';
-    
-    if (
-      creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
-      creativeURL.includes("youtube.com") ||
-      creativeURL.includes("youtu.be")
-    ) {
-      // Video reward
-      setShowVideoReward((prev) => ({ ...prev, [adId]: true }));
-    } else if (creativeType.toLowerCase() === "html") {
-      // HTML reward
-      setShowHtmlReward((prev) => ({ ...prev, [adId]: true }));
-    } else if (
-      creativeType.toLowerCase() === "image" ||
-      creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)
-    ) {
-      // Image reward
-      setShowImageReward((prev) => ({ ...prev, [adId]: true }));
-    }
-    } catch (error) {
-      // Error sending reward transaction
-      // Don't show reward animation when transaction fails
-    }
-  }, [ads, userRewards]);
+      try {
+        // Send transaction
+        // TODO 
+        //await sendRewardTransaction(adId);
+
+        // Set reward animation based on ad type
+        const creativeURL = currentAd.creativeURL || "";
+        const creativeType = currentAd.creativeType || "";
+
+        if (
+          creativeURL.match(/\.(mp4|webm|ogg|mov)$/i) ||
+          creativeURL.includes("youtube.com") ||
+          creativeURL.includes("youtu.be")
+        ) {
+          // Video reward
+          setShowVideoReward((prev) => ({ ...prev, [adId]: true }));
+        } else if (creativeType.toLowerCase() === "html") {
+          // HTML reward
+          setShowHtmlReward((prev) => ({ ...prev, [adId]: true }));
+        } else if (
+          creativeType.toLowerCase() === "image" ||
+          creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+        ) {
+          // Image reward
+          setShowImageReward((prev) => ({ ...prev, [adId]: true }));
+        }
+      } catch (error) {
+        // Error sending reward transaction
+        // Don't show reward animation when transaction fails
+      }
+    },
+    [ads, userRewards]
+  );
 
   // Send reward transaction
   const sendRewardTransaction = async (adId: string) => {
@@ -149,7 +161,7 @@ export default function AdsComponent() {
 
       // Simulate reward amount (10 tokens with 18 decimals)
       const rewardAmount = "10000000000000000000";
-      
+
       // Send transaction
       const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
         transaction: [
@@ -164,21 +176,21 @@ export default function AdsComponent() {
       });
 
       if (finalPayload.status === "error") {
-        setTxStatus((prev) => ({ 
-          ...prev, 
-          [adId]: "error: " + JSON.stringify(finalPayload) 
+        setTxStatus((prev) => ({
+          ...prev,
+          [adId]: "error: " + JSON.stringify(finalPayload),
         }));
         throw new Error("Transaction error");
       } else {
         // Transaction successful
-        setTxStatus((prev) => ({ 
-          ...prev, 
-          [adId]: "success: " + finalPayload.transaction_id 
+        setTxStatus((prev) => ({
+          ...prev,
+          [adId]: "success: " + finalPayload.transaction_id,
         }));
-        
+
         // Update user reward records
         setUserRewards((prev) => [...prev, adId]);
-        
+
         // Call API to update reward status
         const rewardParams: AdRewardParams = {
           adId,
@@ -188,15 +200,15 @@ export default function AdsComponent() {
           chainId: "5", // Goerli testnet
           txHash: finalPayload.transaction_id,
         };
-        
+
         await postAdReward(rewardParams);
         return finalPayload.transaction_id;
       }
     } catch (err: any) {
       // Transaction error
-      setTxStatus((prev) => ({ 
-        ...prev, 
-        [adId]: "error: " + (err.message || String(err)) 
+      setTxStatus((prev) => ({
+        ...prev,
+        [adId]: "error: " + (err.message || String(err)),
       }));
       throw err;
     }
@@ -212,6 +224,9 @@ export default function AdsComponent() {
   }, []);
 
   const pauseAllVideos = useCallback(() => {
+    // Store the current video ID before pausing
+    const currentVideoId = currentVideoRef.current;
+    
     // Pause all HTML5 videos
     document.querySelectorAll("video").forEach((video) => {
       try {
@@ -241,9 +256,9 @@ export default function AdsComponent() {
         });
     }
 
-    // Clear current video reference when pausing all
-    currentVideoRef.current = null;
-    // Cleared current video reference
+    // Don't clear the current video reference when pausing for comment drawer
+    // This ensures we can resume the same video when the drawer is closed
+    // currentVideoRef.current = null;
   }, []);
 
   const autoPlayCurrentVideo = useCallback(() => {
@@ -252,14 +267,14 @@ export default function AdsComponent() {
     // Pause all other videos first to ensure only one plays at a time
     const pauseAllVideos = () => {
       const currentVideoId = currentVideoRef.current;
-      
+
       // Find all video elements and pause them
       const videoElements = document.querySelectorAll("video");
       videoElements.forEach((video) => {
         try {
-          const container = video.closest('[data-ad-id]');
-          const adId = container?.getAttribute('data-ad-id');
-          
+          const container = video.closest("[data-ad-id]");
+          const adId = container?.getAttribute("data-ad-id");
+
           if (adId !== currentVideoId) {
             video.pause();
             // Paused HTML5 video
@@ -275,9 +290,9 @@ export default function AdsComponent() {
       );
       youtubeIframes.forEach((iframe) => {
         try {
-          const container = iframe.closest('[data-ad-id]');
-          const adId = container?.getAttribute('data-ad-id');
-          
+          const container = iframe.closest("[data-ad-id]");
+          const adId = container?.getAttribute("data-ad-id");
+
           if (adId !== currentVideoId) {
             // Try to access the contentWindow to send a postMessage
             const contentWindow = (iframe as HTMLIFrameElement).contentWindow;
@@ -293,7 +308,6 @@ export default function AdsComponent() {
           // Could not pause YouTube iframe
         }
       });
-      
     };
 
     // Pause all videos first
@@ -307,7 +321,7 @@ export default function AdsComponent() {
         // Auto-playing video for ad
 
         // For YouTube Shorts, we need special handling
-        if ((currentAd.creativeURL || '').includes("youtube.com/shorts/")) {
+        if ((currentAd.creativeURL || "").includes("youtube.com/shorts/")) {
           // Detected YouTube Shorts URL, applying special handling
 
           // Find the specific iframe for this ad
@@ -319,10 +333,10 @@ export default function AdsComponent() {
             const iframe = adContainer.querySelector("iframe");
             if (iframe) {
               // Refreshing YouTube Shorts iframe
-              
+
               // Store original src
               const originalSrc = iframe.src;
-              
+
               // Add autoplay=1 parameter if not already present
               let newSrc = originalSrc;
               if (!newSrc.includes("autoplay=1")) {
@@ -331,10 +345,10 @@ export default function AdsComponent() {
                   newSrc += (newSrc.includes("?") ? "&" : "?") + "autoplay=1";
                 }
               }
-              
+
               // Force reload by changing src
               iframe.src = newSrc;
-              
+
               // Don't try other methods for Shorts to avoid conflicts
               return;
             }
@@ -342,23 +356,27 @@ export default function AdsComponent() {
         }
         // For regular YouTube videos, use the YouTube API
         else if (
-          ((currentAd.creativeURL || '').includes("youtube.com") || 
-           (currentAd.creativeURL || '').includes("youtu.be")) && 
-          !(currentAd.creativeURL || '').includes("shorts")
+          ((currentAd.creativeURL || "").includes("youtube.com") ||
+            (currentAd.creativeURL || "").includes("youtu.be")) &&
+          !(currentAd.creativeURL || "").includes("shorts")
         ) {
           // Find the specific iframe for this ad
           const adContainer = document.querySelector(
             `[data-ad-id="${currentAd._id}"]`
           );
-          
+
           if (adContainer) {
             const iframe = adContainer.querySelector("iframe");
             if (iframe) {
               try {
                 // Try to send a postMessage to play the video
-                const contentWindow = (iframe as HTMLIFrameElement).contentWindow;
+                const contentWindow = (iframe as HTMLIFrameElement)
+                  .contentWindow;
                 if (contentWindow) {
-                  contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', "*");
+                  contentWindow.postMessage(
+                    '{"event":"command","func":"playVideo","args":""}',
+                    "*"
+                  );
                   // Sent playVideo command via postMessage
                 }
               } catch (e) {
@@ -368,28 +386,35 @@ export default function AdsComponent() {
           }
         }
         // For regular video elements, use the standard video API
-        else if ((currentAd.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i)) {
+        else if (
+          (currentAd.creativeURL || "").match(/\.(mp4|webm|ogg|mov)$/i)
+        ) {
           const adContainer = document.querySelector(
             `[data-ad-id="${currentAd._id}"]`
           );
-          
+
           if (adContainer) {
             const video = adContainer.querySelector("video");
             if (video) {
               try {
-                video.play()
-                  .then(() => {/* Regular video playing successfully */})
-                  .catch(e => {/* Error playing regular video */});
+                video
+                  .play()
+                  .then(() => {
+                    /* Regular video playing successfully */
+                  })
+                  .catch((e) => {
+                    /* Error playing regular video */
+                  });
               } catch (e) {
                 // Error with video.play()
               }
             }
           }
         }
-        
+
         // Force a re-render of the video player to ensure it's properly initialized
         // But only for non-shorts videos to avoid conflicts
-        if (!(currentAd.creativeURL || '').includes("youtube.com/shorts/")) {
+        if (!(currentAd.creativeURL || "").includes("youtube.com/shorts/")) {
           setAds((prevAds) => [...prevAds]);
         }
       }
@@ -399,42 +424,45 @@ export default function AdsComponent() {
   const handleSlideChange = (swiper: SwiperType) => {
     const newIndex = swiper.activeIndex;
     setActiveIndex(newIndex);
-    
+
     const currentAd = ads[newIndex];
     const previousIndex = swiper.previousIndex;
     const previousAd = ads[previousIndex];
-    
+
     if (previousAd) {
       // Previous ad info
     }
     if (currentAd) {
       // Current ad info
     }
-    
-    const isCurrentVideo = currentAd && (
-      (currentAd.creativeType || '').toLowerCase() === "video" ||
-      (currentAd.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i) ||
-      (currentAd.creativeURL || '').includes("youtube.com") ||
-      (currentAd.creativeURL || '').includes("youtu.be")
-    );
-    
+
+    const isCurrentVideo =
+      currentAd &&
+      ((currentAd.creativeType || "").toLowerCase() === "video" ||
+        (currentAd.creativeURL || "").match(/\.(mp4|webm|ogg|mov)$/i) ||
+        (currentAd.creativeURL || "").includes("youtube.com") ||
+        (currentAd.creativeURL || "").includes("youtu.be"));
+
     if (isCurrentVideo) {
-      currentVideoRef.current = currentAd._id;
       // Set current video reference
+      currentVideoRef.current = currentAd._id;
+      console.log("Setting current video reference to:", currentAd._id);
     }
-    
+
+    // Pause videos but don't clear the current video reference
     pauseAllVideos();
-    
-    if (previousAd && (
-      (previousAd.creativeType || '').toLowerCase() === "video" ||
-      (previousAd.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i) ||
-      (previousAd.creativeURL || '').includes("youtube.com") ||
-      (previousAd.creativeURL || '').includes("youtu.be")
-    )) {
+
+    if (
+      previousAd &&
+      ((previousAd.creativeType || "").toLowerCase() === "video" ||
+        (previousAd.creativeURL || "").match(/\.(mp4|webm|ogg|mov)$/i) ||
+        (previousAd.creativeURL || "").includes("youtube.com") ||
+        (previousAd.creativeURL || "").includes("youtu.be"))
+    ) {
       const prevAdContainer = document.querySelector(
         `[data-ad-id="${previousAd._id}"]`
       );
-      
+
       if (prevAdContainer) {
         const video = prevAdContainer.querySelector("video");
         if (video) {
@@ -445,12 +473,13 @@ export default function AdsComponent() {
             // Error pausing previous video
           }
         }
-        
+
         const iframe = prevAdContainer.querySelector("iframe");
-        if (iframe && (
-          (previousAd.creativeURL || '').includes("youtube.com") || 
-          (previousAd.creativeURL || '').includes("youtu.be")
-        )) {
+        if (
+          iframe &&
+          ((previousAd.creativeURL || "").includes("youtube.com") ||
+            (previousAd.creativeURL || "").includes("youtu.be"))
+        ) {
           try {
             const contentWindow = (iframe as HTMLIFrameElement).contentWindow;
             if (contentWindow) {
@@ -466,31 +495,31 @@ export default function AdsComponent() {
         }
       }
     }
-    
+
     // Clear any existing timer
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    
+
     // Get the current ad
     if (!currentAd) return;
-    
+
     // Set the view start time for the current ad
     setViewStartTime((prev) => ({ ...prev, [currentAd._id]: Date.now() }));
-    
+
     // For HTML ads, set a timer to mark as completed after 10 seconds
-    if ((currentAd.creativeType || '').toLowerCase() === "html") {
+    if ((currentAd.creativeType || "").toLowerCase() === "html") {
       // Setting timer for HTML ad
       timerRef.current = setTimeout(() => {
         // HTML ad viewed for 10 seconds
         handleContentComplete(currentAd._id);
       }, 10000);
-    } 
+    }
     // For Image ads, set a timer to mark as completed after 5 seconds
     else if (
-      (currentAd.creativeType || '').toLowerCase() === "image" ||
-      (currentAd.creativeURL || '').match(/\.(jpg|jpeg|png|gif|webp)$/i)
+      (currentAd.creativeType || "").toLowerCase() === "image" ||
+      (currentAd.creativeURL || "").match(/\.(jpg|jpeg|png|gif|webp)$/i)
     ) {
       // Setting timer for Image ad
       timerRef.current = setTimeout(() => {
@@ -500,13 +529,13 @@ export default function AdsComponent() {
     }
     // For video ads, set the current video reference and auto-play
     else if (
-      (currentAd.creativeType || '').toLowerCase() === "video" ||
-      (currentAd.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i) ||
-      (currentAd.creativeURL || '').includes("youtube.com") ||
-      (currentAd.creativeURL || '').includes("youtu.be")
+      (currentAd.creativeType || "").toLowerCase() === "video" ||
+      (currentAd.creativeURL || "").match(/\.(mp4|webm|ogg|mov)$/i) ||
+      (currentAd.creativeURL || "").includes("youtube.com") ||
+      (currentAd.creativeURL || "").includes("youtu.be")
     ) {
       currentVideoRef.current = currentAd._id;
-      
+
       // Add a slight delay to ensure components are mounted
       setTimeout(() => {
         // Auto-playing video for slide change
@@ -521,8 +550,8 @@ export default function AdsComponent() {
         return (
           <div className="relative w-full h-full" data-ad-id={ad._id}>
             <Image
-              src={ad.creativeURL || ''}
-              alt={ad.adsName || ''}
+              src={ad.creativeURL || ""}
+              alt={ad.adsName || ""}
               fill
               className="object-contain rounded-lg"
               onLoadingComplete={() => {
@@ -536,7 +565,7 @@ export default function AdsComponent() {
         return (
           <div className="relative w-full h-full" data-ad-id={ad._id}>
             <HTMLContent
-              htmlUrl={ad.creativeURL || ''}
+              htmlUrl={ad.creativeURL || ""}
               onLoad={() => {
                 // HTML content loaded
               }}
@@ -552,7 +581,7 @@ export default function AdsComponent() {
                     <button
                       onClick={() =>
                         window.open(
-                          ad.creativeURL || '',
+                          ad.creativeURL || "",
                           "_blank",
                           "noopener,noreferrer"
                         )
@@ -572,7 +601,7 @@ export default function AdsComponent() {
         return (
           <div className="relative w-full h-full" data-ad-id={ad._id}>
             <VideoPlayer
-              videoSrc={ad.creativeURL || ''}
+              videoSrc={ad.creativeURL || ""}
               onVideoEnd={() => {
                 handleContentComplete(ad._id);
               }}
@@ -583,13 +612,13 @@ export default function AdsComponent() {
         );
 
       default:
-        const creativeURL = ad.creativeURL || '';
+        const creativeURL = ad.creativeURL || "";
         if (creativeURL.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
           return (
             <div className="relative w-full h-full" data-ad-id={ad._id}>
               <Image
                 src={creativeURL}
-                alt={ad.adsName || ''}
+                alt={ad.adsName || ""}
                 fill
                 className="object-contain rounded-lg"
                 onLoadingComplete={() => {
@@ -606,7 +635,7 @@ export default function AdsComponent() {
           return (
             <div className="relative w-full h-full" data-ad-id={ad._id}>
               <VideoPlayer
-                videoSrc={ad.creativeURL || ''}
+                videoSrc={ad.creativeURL || ""}
                 onVideoEnd={() => {
                   handleContentComplete(ad._id);
                 }}
@@ -633,52 +662,52 @@ export default function AdsComponent() {
   useEffect(() => {
     if (!loading && ads.length > 0) {
       const firstAd = ads[0];
-      
+
       // Clear any existing timer
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
-      
+
       // Set the view start time for the first ad
       setViewStartTime((prev) => ({ ...prev, [firstAd._id]: Date.now() }));
-      
+
       // For HTML ads, set a timer to mark as completed after 10 seconds
-      if ((firstAd.creativeType || '').toLowerCase() === "html") {
+      if ((firstAd.creativeType || "").toLowerCase() === "html") {
         // Setting timer for HTML ad
         timerRef.current = setTimeout(() => {
           // HTML ad viewed for 10 seconds
           handleContentComplete(firstAd._id);
         }, 10000);
-      } 
+      }
       // For Image ads, set a timer to mark as completed after 5 seconds
       else if (
-        (firstAd.creativeType || '').toLowerCase() === "image" ||
-        (firstAd.creativeURL || '').match(/\.(jpg|jpeg|png|gif|webp)$/i)
+        (firstAd.creativeType || "").toLowerCase() === "image" ||
+        (firstAd.creativeURL || "").match(/\.(jpg|jpeg|png|gif|webp)$/i)
       ) {
         // Setting timer for Image ad
         timerRef.current = setTimeout(() => {
           // Image ad viewed for 5 seconds
           handleContentComplete(firstAd._id);
         }, 5000);
-      } 
+      }
       // For video ads, set the current video reference and auto-play
       else if (
-        (firstAd.creativeType || '').toLowerCase() === "video" ||
-        (firstAd.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i) ||
-        (firstAd.creativeURL || '').includes("youtube.com") ||
-        (firstAd.creativeURL || '').includes("youtu.be")
+        (firstAd.creativeType || "").toLowerCase() === "video" ||
+        (firstAd.creativeURL || "").match(/\.(mp4|webm|ogg|mov)$/i) ||
+        (firstAd.creativeURL || "").includes("youtube.com") ||
+        (firstAd.creativeURL || "").includes("youtu.be")
       ) {
         // Set current video reference to the first ad
         currentVideoRef.current = firstAd._id;
-        
+
         // Add a slight delay to ensure components are mounted
         setTimeout(() => {
           // Auto-playing first video ad
           autoPlayCurrentVideo();
         }, 300);
       }
-      
+
       // Clean up function
       return () => {
         if (timerRef.current) {
@@ -760,10 +789,10 @@ export default function AdsComponent() {
                   className="absolute inset-0 z-10"
                   style={{
                     pointerEvents:
-                      (ad.creativeType || '').toLowerCase() === "video" ||
-                      (ad.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i) ||
-                      (ad.creativeURL || '').includes("youtube.com") ||
-                      (ad.creativeURL || '').includes("youtu.be")
+                      (ad.creativeType || "").toLowerCase() === "video" ||
+                      (ad.creativeURL || "").match(/\.(mp4|webm|ogg|mov)$/i) ||
+                      (ad.creativeURL || "").includes("youtube.com") ||
+                      (ad.creativeURL || "").includes("youtu.be")
                         ? "none"
                         : "auto",
                   }}
@@ -772,19 +801,23 @@ export default function AdsComponent() {
                     className="absolute inset-0"
                     style={{
                       pointerEvents:
-                        (ad.creativeType || '').toLowerCase() === "video" ||
-                        (ad.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i) ||
-                        (ad.creativeURL || '').includes("youtube.com") ||
-                        (ad.creativeURL || '').includes("youtu.be")
+                        (ad.creativeType || "").toLowerCase() === "video" ||
+                        (ad.creativeURL || "").match(
+                          /\.(mp4|webm|ogg|mov)$/i
+                        ) ||
+                        (ad.creativeURL || "").includes("youtube.com") ||
+                        (ad.creativeURL || "").includes("youtu.be")
                           ? "none"
                           : "auto",
                     }}
                     onClick={(e) => {
                       if (
-                        (ad.creativeType || '').toLowerCase() !== "video" &&
-                        !(ad.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i) &&
-                        !(ad.creativeURL || '').includes("youtube.com") &&
-                        !(ad.creativeURL || '').includes("youtu.be")
+                        (ad.creativeType || "").toLowerCase() !== "video" &&
+                        !(ad.creativeURL || "").match(
+                          /\.(mp4|webm|ogg|mov)$/i
+                        ) &&
+                        !(ad.creativeURL || "").includes("youtube.com") &&
+                        !(ad.creativeURL || "").includes("youtu.be")
                       ) {
                         e.stopPropagation();
                       }
@@ -812,10 +845,10 @@ export default function AdsComponent() {
                 )}
 
                 {/* Swipe detection overlay - only for videos */}
-                {((ad.creativeType || '').toLowerCase() === "video" ||
-                  (ad.creativeURL || '').match(/\.(mp4|webm|ogg|mov)$/i) ||
-                  (ad.creativeURL || '').includes("youtube.com") ||
-                  (ad.creativeURL || '').includes("youtu.be")) && (
+                {((ad.creativeType || "").toLowerCase() === "video" ||
+                  (ad.creativeURL || "").match(/\.(mp4|webm|ogg|mov)$/i) ||
+                  (ad.creativeURL || "").includes("youtube.com") ||
+                  (ad.creativeURL || "").includes("youtu.be")) && (
                   <div className="absolute inset-0 z-[5]">
                     {/* Top swipe area - to go to previous slide */}
                     <div
@@ -881,19 +914,21 @@ export default function AdsComponent() {
               </div>
 
               <div className="absolute bottom-10 left-4 z-20 p-2 rounded-lg">
-                <h3 className="text-white font-bold text-xl">{ad.adsName || ''}</h3>
+                <h3 className="text-white font-bold text-xl">
+                  {ad.adsName || ""}
+                </h3>
               </div>
 
-              <AdActionButtons 
-                adId={ad._id} 
-                completed={completedAds[ad._id]} 
+              <AdActionButtons
+                adId={ad._id}
+                completed={completedAds[ad._id]}
                 onVideoStateChange={(shouldPause) => {
                   if (shouldPause) {
                     pauseAllVideos();
                   } else if (currentVideoRef.current === ad._id) {
                     autoPlayCurrentVideo();
                   }
-                }} 
+                }}
               />
             </SwiperSlide>
           ))}

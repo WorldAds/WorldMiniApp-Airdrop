@@ -3,14 +3,15 @@ import Image from "next/image";
 import { triggerConfetti } from "@/utils/confetti";
 import CommentDrawer from "./comments/CommentDrawer";
 import { useAuth } from "@/contexts/AuthContext";
+import { postFavorite, getUserFavorites } from "@/app/api/service";
+import profileIcon from "../public/icons/profile.png";
+import { useRouter } from "next/navigation";
 
 interface Props {
   adId: string;
   completed?: boolean;
   onVideoStateChange?: (shouldPause: boolean) => void;
 }
-import profileIcon from "../public/icons/profile.png";
-import { useRouter } from "next/navigation";
 
 const AdActionButtons: React.FC<Props> = ({ 
   adId, 
@@ -24,19 +25,69 @@ const AdActionButtons: React.FC<Props> = ({
   const favouriteButtonRef = useRef<SVGSVGElement>(null);
   const router = useRouter();
 
-  const handleFavouriteClick = () => {
-    if (!isFavourited) {
+  // Check if the ad is already favorited when component mounts
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (!user) return;
 
-      triggerConfetti(undefined, {
-        particleCount: 100,
-        spread: 360,
-        startVelocity: 25,
-        duration: 1000,
-        zIndex: 9999  
-      });
+      try {
+        const favorites = await getUserFavorites(user.worldId);
+        // Check if this ad is in the user's favorites
+        const isAdFavorited = favorites.some((favorite: any) => favorite.adId === adId);
+        setIsFavourited(isAdFavorited);
+      } catch (error) {
+        console.error('Error checking favorite status:', error);
+      }
+    };
+
+    checkFavoriteStatus();
+  }, [adId, user]);
+
+  const handleFavouriteClick = async () => {
+    if (!user) {
+      // If user is not logged in, redirect to login page
+      router.push("/wallet-auth");
+      return;
     }
-    
-    setIsFavourited(!isFavourited);
+
+    try {
+      if (!isFavourited) {
+        // Add to favorites
+        await postFavorite({
+          adId,
+          worldId: user.worldId,
+          createdAt: new Date().toISOString(),
+          note: "Favorited ad"
+        });
+
+        // Show confetti animation
+        triggerConfetti(undefined, {
+          particleCount: 100,
+          spread: 360,
+          startVelocity: 25,
+          duration: 1000,
+          zIndex: 9999  
+        });
+        
+        // Re-fetch favorites to update the state
+        const favorites = await getUserFavorites(user.worldId);
+        const isAdFavorited = favorites.some((favorite: any) => favorite.adId === adId);
+        setIsFavourited(isAdFavorited);
+      } else {
+        // In a real implementation, you would have an API endpoint to remove favorites
+        // For now, we'll just update the UI state
+        setIsFavourited(false);
+        // Note: Backend API doesn't seem to have a delete favorite endpoint yet
+        // This would be implemented as:
+        // await deleteFavorite(adId, user.worldId);
+        // Then re-fetch favorites:
+        // const favorites = await getUserFavorites(user.worldId);
+        // const isAdFavorited = favorites.some((favorite: any) => favorite.adId === adId);
+        // setIsFavourited(isAdFavorited);
+      }
+    } catch (error) {
+      console.error('Error updating favorite status:', error);
+    }
   };
 
   return (
@@ -142,7 +193,13 @@ const AdActionButtons: React.FC<Props> = ({
       <CommentDrawer
         adId={adId}
         isOpen={isCommentDrawerOpen}
-        onClose={() => setIsCommentDrawerOpen(false)}
+        onClose={() => {
+          setIsCommentDrawerOpen(false);
+          // Explicitly call onVideoStateChange with false to ensure video resumes
+          setTimeout(() => {
+            onVideoStateChange(false);
+          }, 300);
+        }}
         onVideoStateChange={onVideoStateChange}
       />
     </div>

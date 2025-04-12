@@ -4,10 +4,11 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Reply } from "@/@types/data";
 import { Heart, HeartCrack } from "lucide-react";
-import { getRepliesByCommentId, getUserByWorldID } from "@/app/api/service";
+import { getRepliesByCommentId, getUserByWorldID, getUserReaction } from "@/app/api/service";
 import ReplyItem from "@/components/comments/ReplyItem";
 import websocketService from "@/app/api/websocket";
 import { useCommentReactions } from "@/utils/commentReactions";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CommentItemProps {
   id: string;
@@ -48,8 +49,37 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   const [userNickname, setUserNickname] = useState<string | null>(null);
   const [repliesExpanded, setRepliesExpanded] = useState(false); // Track if replies are expanded
+  const [userReactionState, setUserReactionState] = useState<"Like" | "Dislike" | null>(null);
+  const [isLoadingReaction, setIsLoadingReaction] = useState<boolean>(true);
+  const { user } = useAuth();
   
-  // Use the comment reactions hook
+  // Fetch user's reaction when component mounts
+  useEffect(() => {
+    const fetchUserReaction = async () => {
+      if (user?.worldId) {
+        setIsLoadingReaction(true);
+        try {
+          const reaction = await getUserReaction(id, "Comment", user.worldId);
+          if (reaction && reaction.reactionType) {
+            setUserReactionState(reaction.reactionType as "Like" | "Dislike");
+          } else {
+            setUserReactionState(null);
+          }
+        } catch (error) {
+          console.error("Error fetching user reaction:", error);
+          setUserReactionState(null);
+        } finally {
+          setIsLoadingReaction(false);
+        }
+      } else {
+        setIsLoadingReaction(false);
+      }
+    };
+    
+    fetchUserReaction();
+  }, [id, user?.worldId]);
+  
+  // Use the comment reactions hook after we've fetched the initial reaction
   const { 
     likeCount: currentLikeCount, 
     dislikeCount: currentDislikeCount,
@@ -57,7 +87,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
     isLoading: isReactionLoading,
     handleLike,
     handleDislike
-  } = useCommentReactions(id, "Comment", likeCount, dislikeCount);
+  } = useCommentReactions(id, "Comment", likeCount, dislikeCount, userReactionState);
 
   // Get user data based on worldId
   useEffect(() => {
@@ -193,18 +223,18 @@ const CommentItem: React.FC<CommentItemProps> = ({
             {/* Like/Dislike buttons - horizontal layout */}
             <div className="flex items-center">
               <button 
-                className={`${userReaction === "Like" ? "text-pink-500" : "text-gray-400"} hover:text-pink-500 ${isReactionLoading ? "opacity-50" : ""}`}
+                className={`${userReaction === "Like" ? "text-pink-500" : "text-gray-400"} hover:text-pink-500 ${isReactionLoading || isLoadingReaction ? "opacity-50" : ""}`}
                 onClick={handleLike}
-                disabled={isReactionLoading}
+                disabled={isReactionLoading || isLoadingReaction}
               >
                 <Heart size={16} className={userReaction === "Like" ? "fill-current" : ""} />
               </button>
               <span className="text-gray-400 text-xs mx-1">{currentLikeCount}</span>
               
               <button 
-                className={`${userReaction === "Dislike" ? "text-gray-400" : "text-gray-400"} hover:text-gray-300 ml-3 ${isReactionLoading ? "opacity-50" : ""}`}
+                className={`${userReaction === "Dislike" ? "text-blue-500" : "text-gray-400"} hover:text-blue-500 ml-3 ${isReactionLoading || isLoadingReaction ? "opacity-50" : ""}`}
                 onClick={handleDislike}
-                disabled={isReactionLoading}
+                disabled={isReactionLoading || isLoadingReaction}
               >
                 <HeartCrack size={16} className={userReaction === "Dislike" ? "fill-current" : ""} />
               </button>

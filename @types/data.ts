@@ -84,3 +84,10 @@ export interface ReactionParams {
   worldId: string;
   reactionType: "Like" | "Dislike";
 }
+
+export interface FavoriteParams {
+  adId: string;
+  worldId: string;
+  createdAt: string;
+  note?: string;
+}

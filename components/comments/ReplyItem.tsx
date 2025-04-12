@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Heart, HeartCrack } from "lucide-react";
-import { getUserByWorldID } from "@/app/api/service";
+import { getUserByWorldID, getUserReaction } from "@/app/api/service";
 import { useCommentReactions } from "@/utils/commentReactions";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ReplyItemProps {
   _id?: string; // Add optional _id property
@@ -29,8 +30,42 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
 }) => {
   const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   const [userNickname, setUserNickname] = useState<string | null>(null);
+  const [userReactionState, setUserReactionState] = useState<"Like" | "Dislike" | null>(null);
+  const [isLoadingReaction, setIsLoadingReaction] = useState<boolean>(true);
+  const { user } = useAuth();
   
-  // Use the comment reactions hook for replies
+  // Generate a consistent ID for the reply
+  const replyId = _id || `${worldId}-${new Date(createdAt).getTime()}`;
+  
+  // Fetch user's reaction when component mounts
+  useEffect(() => {
+    const fetchUserReaction = async () => {
+      if (user?.worldId && _id) {
+        setIsLoadingReaction(true);
+        try {
+          const reaction = await getUserReaction(_id, "Reply", user.worldId);
+          if (reaction && reaction.reactionType) {
+            setUserReactionState(reaction.reactionType as "Like" | "Dislike");
+          } else {
+            setUserReactionState(null);
+          }
+        } catch (error) {
+          console.error("Error fetching user reaction:", error);
+          setUserReactionState(null);
+        } finally {
+          setIsLoadingReaction(false);
+        }
+      } else {
+        setIsLoadingReaction(false);
+      }
+    };
+    
+    if (_id) {
+      fetchUserReaction();
+    }
+  }, [_id, user?.worldId]);
+  
+  // Use the comment reactions hook after we've fetched the initial reaction
   const { 
     likeCount: currentLikeCount, 
     dislikeCount: currentDislikeCount,
@@ -39,13 +74,11 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
     handleLike,
     handleDislike
   } = useCommentReactions(
-    // We need to ensure we have a valid ID for the reply
-    // If _id is not available, we'll use a combination of worldId and createdAt as a fallback
-    // This is not ideal but should work for the UI demonstration
-    _id || `${worldId}-${new Date(createdAt).getTime()}`,
+    replyId,
     "Reply", 
     likeCount, 
-    dislikeCount
+    dislikeCount,
+    userReactionState
   );
 
   // Get user data based on worldId
@@ -134,18 +167,18 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
             {/* Like/Dislike buttons - horizontal layout */}
             <div className="flex items-center">
               <button 
-                className={`${userReaction === "Like" ? "text-pink-500" : "text-gray-400"} hover:text-pink-500 ${isReactionLoading ? "opacity-50" : ""}`}
+                className={`${userReaction === "Like" ? "text-pink-500" : "text-gray-400"} hover:text-pink-500 ${isReactionLoading || isLoadingReaction ? "opacity-50" : ""}`}
                 onClick={handleLike}
-                disabled={isReactionLoading}
+                disabled={isReactionLoading || isLoadingReaction}
               >
                 <Heart size={14} className={userReaction === "Like" ? "fill-current" : ""} />
               </button>
               <span className="text-gray-400 text-xs mx-1">{currentLikeCount}</span>
               
               <button 
-                className={`${userReaction === "Dislike" ? "text-gray-400" : "text-gray-400"} hover:text-gray-300 ml-3 ${isReactionLoading ? "opacity-50" : ""}`}
+                className={`${userReaction === "Dislike" ? "text-blue-500" : "text-gray-400"} hover:text-blue-500 ml-3 ${isReactionLoading || isLoadingReaction ? "opacity-50" : ""}`}
                 onClick={handleDislike}
-                disabled={isReactionLoading}
+                disabled={isReactionLoading || isLoadingReaction}
               >
                 <HeartCrack size={14} className={userReaction === "Dislike" ? "fill-current" : ""} />
               </button>

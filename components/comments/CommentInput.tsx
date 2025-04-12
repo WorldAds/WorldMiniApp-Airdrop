@@ -15,6 +15,7 @@ interface CommentInputProps {
   replyToCommentId?: string;
   onCommentAdded: (newComment: Comment) => void;
   onCancelReply?: () => void;
+  onReplyAdded?: (commentId: string, reply: any) => void; // Add new callback for replies
 }
 
 const CommentInput: React.FC<CommentInputProps> = ({
@@ -22,6 +23,7 @@ const CommentInput: React.FC<CommentInputProps> = ({
   replyToCommentId,
   onCommentAdded,
   onCancelReply,
+  onReplyAdded,
 }) => {
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -195,7 +197,22 @@ const CommentInput: React.FC<CommentInputProps> = ({
       }
       
       // Notify parent component
-      onCommentAdded(response);
+      // For comments, directly add to the list
+      // For replies, call onReplyAdded to trigger immediate update
+      if (!replyToCommentId) {
+        onCommentAdded(response);
+      } else {
+        // For replies, call onReplyAdded if available
+        if (onReplyAdded) {
+          console.log('Calling onReplyAdded with commentId:', replyToCommentId);
+          onReplyAdded(replyToCommentId, response);
+        }
+        
+        // Clear the reply state
+        if (onCancelReply) {
+          onCancelReply();
+        }
+      }
       
       // Clear the input
       setContent("");

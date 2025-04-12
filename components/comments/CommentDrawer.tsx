@@ -65,47 +65,71 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
         }
       });
       
-      // Subscribe to new replies - optimized to avoid refetching all replies
+      // Subscribe to new replies - refetch replies when a new one is added
       const unsubscribeNewReply = websocketService.subscribe('new_reply', (data) => {
         if (data.advertisementId === adId) {
           console.log(`New reply for comment ${data.commentId} in ad ${adId}`);
           
-          // Directly add the new reply to the appropriate comment
-          setComments(prevComments => {
-            const updatedComments = prevComments.map(comment => {
-              if (comment._id === data.commentId) {
-                // Add the new reply to the existing replies array
-                const currentReplies = comment.replies || [];
-                
-                // Update the comment with the new reply and increment replyCount
-                return { 
-                  ...comment, 
-                  replies: [data, ...currentReplies],
-                  replyCount: (comment.replyCount || 0) + 1
-                };
-              }
-              return comment;
-            });
-            
-            return updatedComments;
-          });
+          // Refetch replies for this comment instead of directly adding the reply
+          fetchRepliesForComment(data.commentId);
         }
       });
       
       return () => {
-        // Resume the video when comments drawer is closed
-        onVideoStateChange(false);
+        // Resume the video when comments drawer is closed with a slight delay
+        // to ensure the drawer is fully closed before resuming the video
+        setTimeout(() => {
+          onVideoStateChange(false);
+        }, 300);
         
         // Leave the room and unsubscribe from events
         websocketService.leaveRoom(`ad:${adId}`);
         unsubscribeNewComment();
         unsubscribeNewReply();
       };
-    } else {
-      // Resume the video when comments drawer is closed
-      onVideoStateChange(false);
     }
   }, [isOpen, adId, onVideoStateChange]);
+  
+  // Function to fetch replies for a specific comment
+  const fetchRepliesForComment = async (commentId: string) => {
+    try {
+      console.log(`Fetching replies for comment ${commentId}`);
+      const replyData = await getRepliesByCommentId(commentId);
+      
+      // Process reply data
+      let replies = [];
+      if (replyData && typeof replyData === 'object') {
+        if ('replies' in replyData && Array.isArray(replyData.replies)) {
+          replies = replyData.replies;
+          console.log(`Got ${replies.length} replies from API response.replies`);
+        } else if (Array.isArray(replyData)) {
+          replies = replyData;
+          console.log(`Got ${replies.length} replies from API response array`);
+        }
+      }
+      
+      console.log('Replies data:', replies);
+      
+      // Update the comment with the fetched replies
+      setComments(prevComments => {
+        const updatedComments = prevComments.map(comment => {
+          if (comment._id === commentId) {
+            console.log(`Updating comment ${commentId} with ${replies.length} replies`);
+            return { 
+              ...comment, 
+              replies: replies,
+              replyCount: replies.length
+            };
+          }
+          return comment;
+        });
+        
+        return updatedComments;
+      });
+    } catch (error) {
+      console.error(`Error fetching replies for comment ${commentId}:`, error);
+    }
+  };
   
   const fetchComments = async () => {
     setLoading(true);
@@ -266,6 +290,10 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
             replyToCommentId={replyToCommentId}
             onCommentAdded={handleCommentAdded}
             onCancelReply={handleCancelReply}
+            onReplyAdded={(commentId, reply) => {
+              console.log('Reply added, fetching replies for comment:', commentId);
+              fetchRepliesForComment(commentId);
+            }}
           />
         ) : (
           <div className="p-4 text-center border-t border-gray-700">

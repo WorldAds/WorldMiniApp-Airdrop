@@ -1,4 +1,4 @@
-import { AdRewardParams, CreateUserParams, LoginUserParams, PostCommentParams, PostReplyParams, ReactionParams } from '@/@types/data';
+import { AdRewardParams, CreateUserParams, FavoriteParams, LoginUserParams, PostCommentParams, PostReplyParams, ReactionParams } from '@/@types/data';
 import axios from 'axios';
 
 axios.defaults.withCredentials = false;
@@ -253,6 +253,54 @@ export const postReaction = async (params: ReactionParams) => {
     return response.data;
   } catch (error) {
     console.error('Error posting reaction:', error);
+    throw error;
+  }
+};
+
+// Delete a reaction from a comment or reply
+export const deleteReaction = async (targetId: string, targetType: "Comment" | "Reply", worldId: string) => {
+  try {
+    const response = await apiClient.delete('/api/v1/comments/reaction', {
+      params: { targetId, targetType, worldId }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting reaction:', error);
+    throw error;
+  }
+};
+
+// Get user's reaction to a comment or reply
+export const getUserReaction = async (targetId: string, targetType: "Comment" | "Reply", worldId: string) => {
+  try {
+    const response = await apiClient.get('/api/v1/comments/reaction/user', {
+      params: { targetId, targetType, worldId }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user reaction:', error);
+    return null; // Return null if there's no reaction or an error
+  }
+};
+
+// Add an advertisement to favorites
+export const postFavorite = async (params: FavoriteParams) => {
+  try {
+    const response = await apiClient.post('/api/v1/favorites', params);
+    return response.data;
+  } catch (error) {
+    console.error('Error adding favorite:', error);
+    throw error;
+  }
+};
+
+// Get all favorites for a specific world-id
+export const getUserFavorites = async (worldId: string) => {
+  try {
+    const response = await apiClient.get(`/api/v1/favorites/user/${worldId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user favorites:', error);
     throw error;
   }
 };
