@@ -22,6 +22,8 @@ interface CommentItemProps {
   mediaUrl?: string;
   onReplyClick: (commentId: string) => void;
   replies?: Reply[]; // Add optional replies property
+  userReaction?: "Like" | "Dislike" | null; // User's reaction to this comment
+  replyReactions?: Record<string, "Like" | "Dislike">; // All reply reactions
 }
 
 interface ReplyResponse {
@@ -43,43 +45,17 @@ const CommentItem: React.FC<CommentItemProps> = ({
   mediaUrl,
   onReplyClick,
   replies: initialReplies,
+  userReaction: initialUserReaction,
+  replyReactions,
 }) => {
   const [replies, setReplies] = useState<Reply[]>(initialReplies || []);
   const [loading, setLoading] = useState(false);
   const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   const [userNickname, setUserNickname] = useState<string | null>(null);
   const [repliesExpanded, setRepliesExpanded] = useState(false); // Track if replies are expanded
-  const [userReactionState, setUserReactionState] = useState<"Like" | "Dislike" | null>(null);
-  const [isLoadingReaction, setIsLoadingReaction] = useState<boolean>(true);
   const { user } = useAuth();
   
-  // Fetch user's reaction when component mounts
-  useEffect(() => {
-    const fetchUserReaction = async () => {
-      if (user?.worldId) {
-        setIsLoadingReaction(true);
-        try {
-          const reaction = await getUserReaction(id, "Comment", user.worldId);
-          if (reaction && reaction.reactionType) {
-            setUserReactionState(reaction.reactionType as "Like" | "Dislike");
-          } else {
-            setUserReactionState(null);
-          }
-        } catch (error) {
-          console.error("Error fetching user reaction:", error);
-          setUserReactionState(null);
-        } finally {
-          setIsLoadingReaction(false);
-        }
-      } else {
-        setIsLoadingReaction(false);
-      }
-    };
-    
-    fetchUserReaction();
-  }, [id, user?.worldId]);
-  
-  // Use the comment reactions hook after we've fetched the initial reaction
+  // Use the comment reactions hook with the provided reaction
   const { 
     likeCount: currentLikeCount, 
     dislikeCount: currentDislikeCount,
@@ -87,7 +63,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
     isLoading: isReactionLoading,
     handleLike,
     handleDislike
-  } = useCommentReactions(id, "Comment", likeCount, dislikeCount, userReactionState);
+  } = useCommentReactions(id, "Comment", likeCount, dislikeCount, initialUserReaction);
+  
+  // We don't need to fetch reactions anymore, so we're not loading
+  const isLoadingReaction = false;
 
   // Get user data based on worldId
   useEffect(() => {
@@ -288,6 +267,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                           likeCount={reply.likeCount}
                           dislikeCount={reply.dislikeCount}
                           mediaUrl={reply.mediaUrl}
+                          userReaction={replyReactions && reply._id ? replyReactions[reply._id] : null}
                         />
                       ))}
                     </div>

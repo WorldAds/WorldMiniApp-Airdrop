@@ -16,6 +16,7 @@ interface ReplyItemProps {
   likeCount: number;
   dislikeCount: number;
   mediaUrl?: string;
+  userReaction?: "Like" | "Dislike" | null; // User's reaction to this reply
 }
 
 const ReplyItem: React.FC<ReplyItemProps> = ({
@@ -27,45 +28,16 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
   likeCount,
   dislikeCount,
   mediaUrl,
+  userReaction: initialUserReaction,
 }) => {
   const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   const [userNickname, setUserNickname] = useState<string | null>(null);
-  const [userReactionState, setUserReactionState] = useState<"Like" | "Dislike" | null>(null);
-  const [isLoadingReaction, setIsLoadingReaction] = useState<boolean>(true);
   const { user } = useAuth();
   
   // Generate a consistent ID for the reply
   const replyId = _id || `${worldId}-${new Date(createdAt).getTime()}`;
   
-  // Fetch user's reaction when component mounts
-  useEffect(() => {
-    const fetchUserReaction = async () => {
-      if (user?.worldId && _id) {
-        setIsLoadingReaction(true);
-        try {
-          const reaction = await getUserReaction(_id, "Reply", user.worldId);
-          if (reaction && reaction.reactionType) {
-            setUserReactionState(reaction.reactionType as "Like" | "Dislike");
-          } else {
-            setUserReactionState(null);
-          }
-        } catch (error) {
-          console.error("Error fetching user reaction:", error);
-          setUserReactionState(null);
-        } finally {
-          setIsLoadingReaction(false);
-        }
-      } else {
-        setIsLoadingReaction(false);
-      }
-    };
-    
-    if (_id) {
-      fetchUserReaction();
-    }
-  }, [_id, user?.worldId]);
-  
-  // Use the comment reactions hook after we've fetched the initial reaction
+  // Use the comment reactions hook with the provided reaction
   const { 
     likeCount: currentLikeCount, 
     dislikeCount: currentDislikeCount,
@@ -78,8 +50,11 @@ const ReplyItem: React.FC<ReplyItemProps> = ({
     "Reply", 
     likeCount, 
     dislikeCount,
-    userReactionState
+    initialUserReaction
   );
+  
+  // We don't need to fetch reactions anymore, so we're not loading
+  const isLoadingReaction = false;
 
   // Get user data based on worldId
   useEffect(() => {

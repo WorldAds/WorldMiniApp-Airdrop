@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Comment } from "@/@types/data";
-import { getCommentsByAdvertisementId, getRepliesByCommentId } from "@/app/api/service";
+import { getCommentsByAdvertisementId, getRepliesByCommentId, getAdReactions } from "@/app/api/service";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { 
@@ -41,6 +41,8 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
   const [replyToCommentId, setReplyToCommentId] = useState<string | undefined>(undefined);
+  const [commentReactions, setCommentReactions] = useState<Record<string, "Like" | "Dislike">>({});
+  const [replyReactions, setReplyReactions] = useState<Record<string, "Like" | "Dislike">>({});
   const { user, isAuthenticated } = useAuth();
   
   // Fetch comments when the drawer opens
@@ -131,6 +133,27 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
     }
   };
   
+  // Fetch user reactions for all comments and replies
+  const fetchUserReactions = async () => {
+    if (user?.worldId) {
+      try {
+        const reactionsData = await getAdReactions(adId, user.worldId);
+        
+        if (reactionsData && reactionsData.commentReactions) {
+          setCommentReactions(reactionsData.commentReactions);
+        }
+        
+        if (reactionsData && reactionsData.replyReactions) {
+          setReplyReactions(reactionsData.replyReactions);
+        }
+        
+        console.log('Fetched reactions:', reactionsData);
+      } catch (error) {
+        console.error('Error fetching reactions:', error);
+      }
+    }
+  };
+  
   const fetchComments = async () => {
     setLoading(true);
     try {
@@ -148,6 +171,11 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
       
       // Set comments first
       setComments(commentsData);
+      
+      // Fetch user reactions for all comments and replies
+      if (user?.worldId) {
+        fetchUserReactions();
+      }
       
       // Then fetch replies for each comment
       if (commentsData.length > 0) {
@@ -278,6 +306,8 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
                       mediaUrl={comment.mediaUrl}
                       onReplyClick={handleReplyClick}
                       replies={(comment as any).replies} // Pass the replies if they exist
+                      userReaction={commentReactions[comment._id] || null} // Pass the user's reaction
+                      replyReactions={replyReactions} // Pass all reply reactions
                     />
             ))
           )}

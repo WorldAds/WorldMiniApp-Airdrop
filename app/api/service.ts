@@ -283,6 +283,17 @@ export const getUserReaction = async (targetId: string, targetType: "Comment" | 
   }
 };
 
+// Get all user reactions for an advertisement's comments and replies
+export const getAdReactions = async (advertisementId: string, worldId: string) => {
+  try {
+    const response = await apiClient.get(`/api/v1/comments/reactions/advertisement/${advertisementId}/user/${worldId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching ad reactions:', error);
+    return { commentReactions: {}, replyReactions: {} }; // Return empty objects if there's an error
+  }
+};
+
 // Add an advertisement to favorites
 export const postFavorite = async (params: FavoriteParams) => {
   try {
