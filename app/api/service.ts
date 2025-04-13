@@ -258,11 +258,9 @@ export const postReaction = async (params: ReactionParams) => {
 };
 
 // Delete a reaction from a comment or reply
-export const deleteReaction = async (targetId: string, targetType: "Comment" | "Reply", worldId: string) => {
+export const deleteReaction = async (targetId: string) => {
   try {
-    const response = await apiClient.delete('/api/v1/comments/reaction', {
-      params: { targetId, targetType, worldId }
-    });
+    const response = await apiClient.delete(`/api/v1/comments/reaction/${targetId}`);
     return response.data;
   } catch (error) {
     console.error('Error deleting reaction:', error);

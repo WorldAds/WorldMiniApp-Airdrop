@@ -21,6 +21,9 @@ export default function WalletAuthScreen() {
   const { data: session } = useSession();
   const { login } = useAuth();
 
+  // const mockWalletAddress = "0x1234567890abcdef1234567890abcdef12345678";
+  // const mockWorldId = "mock-world-id";
+
   // 2) Add the async walletAuth logic to this handler
   const handleVerifyWallet = async () => {
     try {
@@ -101,6 +104,15 @@ export default function WalletAuthScreen() {
       setIsLoading(false);
     }
   };
+
+  // const handleVerifyWallet = async () =>{
+  //   setIsLoading(true);
+  //   const userData = await login(mockWorldId, mockWalletAddress);
+  //   if (userData) {
+  //             setIsModalOpen(true);
+  //             setIsLoading(false);
+  //  } 
+  // }
 
   const handleContinue = () => {
     setIsModalOpen(false);

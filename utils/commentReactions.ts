@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { postReaction, deleteReaction } from "@/app/api/service";
+import { postReaction, deleteReaction, getUserReaction } from "@/app/api/service";
 import { useState } from "react";
 
 // Custom hook for handling comment and reply reactions
@@ -78,15 +78,17 @@ export const useCommentReactions = (
       setDislikeCount(newDislikeCount);
 
       // Call the API to update the reaction
-      if (userReaction !== null && userReaction !== reactionType) {
-        // If switching reactions, first delete the existing reaction
-        await deleteReaction(id, targetType, user.worldId);
+      if (userReaction !== null) {
+        // Get the reaction ID first
+        const reactionData = await getUserReaction(id, targetType, user.worldId);
+        
+        if (reactionData && reactionData._id) {
+          // If we have a reaction ID, delete it
+          await deleteReaction(reactionData._id);
+        }
       }
       
-      if (newUserReaction === null) {
-        // If removing a reaction, call the delete endpoint
-        await deleteReaction(id, targetType, user.worldId);
-      } else {
+      if (newUserReaction !== null) {
         // If adding or changing a reaction, call the post endpoint
         await postReaction({
           targetId: id,
