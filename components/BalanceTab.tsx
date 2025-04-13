@@ -36,7 +36,7 @@ export default function BalanceTab() {
         setTokens(mockData);
         setLoading(false);
       } catch (error) {
-        console.error("Error fetching prices:", error);
+        // Error fetching prices
         setLoading(false);
       }
     };

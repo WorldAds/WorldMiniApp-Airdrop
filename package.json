@@ -53,6 +53,7 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.3.0",
+    "emoji-picker-react": "^4.12.2",
     "eslint": "8.49.0",
     "eslint-config-next": "13.5.1",
     "ethers": "^6.13.5",

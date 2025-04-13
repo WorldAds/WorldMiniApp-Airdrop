@@ -11,7 +11,7 @@ export default function DataTab() {
     const fetchAds = async () => {
       try {
         const adsData = await getAdsList();
-        console.log("Fetched ads:", adsData);
+        // Fetched ads data
 
         // Ensure each ad has a description, add type annotation for ad
         const updatedAds = (adsData as Ad[]).map((ad: Ad) => ({
@@ -22,7 +22,7 @@ export default function DataTab() {
 
         setAds(updatedAds);
       } catch (error) {
-        console.error("Failed to load ads:", error);
+        // Failed to load ads
       }
     };
 
@@ -36,7 +36,7 @@ export default function DataTab() {
       const date = new Date(dateString);
       return date.toISOString().split("T")[0]; 
     } catch (error) {
-      console.error("Date formatting error:", error);
+      // Date formatting error
       return dateString;
     }
   };

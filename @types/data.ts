@@ -19,3 +19,75 @@ export interface AdRewardParams {
   chainId: string;
   txHash: string;
 }
+
+export interface CreateUserParams {
+worldId: string;
+nickname: string;
+walletAddress: string;
+avatar?: string;
+}
+
+export interface LoginUserParams {
+  worldId: string;
+  walletAddress: string
+}
+  
+export interface Comment{
+  _id: string;
+  advertisementId: string;
+  worldId: string; // Changed from userId to worldId
+  content: string;
+  commentType: string;
+  mediaUrl: string;
+  createdAt: string;
+  updatedAt: string;
+  likeCount: number;
+  dislikeCount: number;
+  replyCount: number;
+  replies?: Reply[]; // Add optional replies property for frontend use
+}
+
+export interface Reply{
+  _id: string;
+  commentId: string;
+  worldId: string; // Changed from userId to worldId
+  content: string;
+  commentType: string;
+  mediaUrl: string;
+  createdAt: string;
+  updatedAt: string;
+  likeCount: number;
+  dislikeCount: number;
+}
+
+
+export interface PostCommentParams{
+  advertisementId: string;
+  content:string;
+  commentType:string;
+  mediaUrl: string;
+  worldId:string;
+}
+
+export interface PostReplyParams{
+  commentId: string;
+  content:string;
+  commentType:string;
+  mediaUrl: string;
+  worldId:string;
+  advertisementId?: string; // Add optional advertisementId to ensure it's included in the reply
+}
+
+export interface ReactionParams {
+  targetId: string;
+  targetType: "Comment" | "Reply";
+  worldId: string;
+  reactionType: "Like" | "Dislike";
+}
+
+export interface FavoriteParams {
+  adId: string;
+  worldId: string;
+  createdAt: string;
+  note?: string;
+}

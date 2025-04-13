@@ -26,10 +26,10 @@ export default function ImageRewardAnimation({
   const glowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    console.log("ImageRewardAnimation mounted, amount:", amount);
+    // ImageRewardAnimation mounted
 
     if (!containerRef.current || !particlesRef.current || !glowRef.current) {
-      console.error("Required refs not available");
+      // Required refs not available
       return;
     }
 
@@ -90,7 +90,7 @@ export default function ImageRewardAnimation({
       particles.forEach((particle) => {
         const angle = Math.random() * Math.PI * 2;
         const distance = 50 + Math.random() * 100;
-        const duration = 0.5 + Math.random() * 0.8; // 缩短持续时间
+        const duration = 0.5 + Math.random() * 0.8; // Shortened duration
 
         gsap.to(particle.element, {
           x: Math.cos(angle) * distance,
@@ -105,7 +105,7 @@ export default function ImageRewardAnimation({
       sparkles.forEach((sparkle) => {
         const angle = Math.random() * Math.PI * 2;
         const distance = 30 + Math.random() * 80;
-        const duration = 0.4 + Math.random() * 0.6; // 缩短持续时间
+        const duration = 0.4 + Math.random() * 0.6; // Shortened duration
 
         gsap.to(sparkle.element, {
           x: Math.cos(angle) * distance,
@@ -123,7 +123,7 @@ export default function ImageRewardAnimation({
         {
           scale: 1.5,
           opacity: 0.8,
-          duration: 0.6, // 缩短持续时间
+          duration: 0.6, // Shortened duration
           ease: "power2.out",
         }
       );
@@ -132,8 +132,8 @@ export default function ImageRewardAnimation({
       gsap.to(glowRef.current, {
         opacity: 0,
         scale: 2,
-        duration: 1.2, // 缩短持续时间
-        delay: 0.6, // 缩短延迟
+        duration: 1.2, // Shortened duration
+        delay: 0.6, // Shortened delay
         ease: "power2.out",
       });
 
@@ -247,7 +247,7 @@ export default function ImageRewardAnimation({
       if (onComplete) {
         onComplete();
       }
-    }, 3000); // 缩短总持续时间到3秒
+    }, 3000); // Shortened total duration to 3 seconds
 
     // Cleanup
     return () => {
@@ -286,7 +286,7 @@ export default function ImageRewardAnimation({
               transition={{ duration: 0.5 }}
             />
 
-            {/* Realistic gold coin - 使用 CSS 动画 */}
+            {/* Realistic gold coin - Using CSS animation */}
             <div
               className="relative w-40 h-40 rounded-full animate-coin-spin"
               style={{
@@ -359,7 +359,7 @@ export default function ImageRewardAnimation({
   );
 }
 
-// 添加到样式文件或内联样式
+// Add to style file or inline style
 const styles = `
 @keyframes coinSpin {
   0% { transform: rotateY(0deg); opacity: 0; }
@@ -418,7 +418,7 @@ const styles = `
 }
 `;
 
-// 将样式添加到文档
+// Add style to document
 if (typeof document !== "undefined") {
   const styleElement = document.createElement("style");
   styleElement.innerHTML = styles;

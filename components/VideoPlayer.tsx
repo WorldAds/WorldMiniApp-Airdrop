@@ -69,13 +69,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         
         // Load YouTube API if not already loaded
         if (typeof window !== 'undefined' && !window.YT) {
-          console.log("Loading YouTube API from main component effect");
           const tag = document.createElement('script');
           tag.src = 'https://www.youtube.com/iframe_api';
           
           // Set up callback for when API is ready
           window.onYouTubeIframeAPIReady = () => {
-            console.log("YouTube API ready from main component effect");
+            // YouTube API is ready
           };
           
           document.body.appendChild(tag);
@@ -121,7 +120,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         }
       } else if (videoRef.current) {
         videoRef.current.play().catch((error) => {
-          console.warn("Autoplay failed:", error);
+          // Autoplay failed
         });
       }
       setIsPlaying(true);
@@ -172,7 +171,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     video.addEventListener("ended", () => {
 
       if (onVideoEnd) {
-        console.log("HTML5 video ended, triggering reward animation");
+        // HTML5 video ended, triggering reward animation
         onVideoEnd();
       }
       
@@ -180,10 +179,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setIsPlaying(false);
       
       setTimeout(() => {
-        console.log("Reward animation complete, restarting video");
+        // Reward animation complete, restarting video
         video.currentTime = 0;
         video.play().catch(error => {
-          console.warn("Auto-replay failed:", error);
+          // Auto-replay failed
         });
         setIsPlaying(true);
       }, 3500); 
@@ -203,7 +202,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     // YouTube player states: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (video cued)
     if (event.data === 0) {
 
-      console.log("YouTube video ended, triggering reward animation");
+      // YouTube video ended, triggering reward animation
       if (onVideoEnd) {
         onVideoEnd();
       }
@@ -214,7 +213,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setIsPlaying(false);
       
       setTimeout(() => {
-        console.log("Reward animation complete, restarting YouTube video");
+        // Reward animation complete, restarting YouTube video
         if (youtubePlayer && typeof youtubePlayer.seekTo === "function") {
           youtubePlayer.seekTo(0, true); 
         }
@@ -415,66 +414,66 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Helper function to initialize YouTube player
   function initYoutubePlayer() {
-    console.log("Initializing YouTube player for ID:", youtubeId);
+    // Initializing YouTube player
     
     if (window.YT && window.YT.Player) {
       try {
-        console.log("Creating new YouTube player instance");
+        // Creating new YouTube player instance
         
         // Check if element exists
         const playerElement = document.getElementById(`youtube-player-${youtubeId}`);
         if (!playerElement) {
-          console.error(`Player element with ID youtube-player-${youtubeId} not found`);
+          // Player element not found
           return;
         }
         
         const player = new window.YT.Player(`youtube-player-${youtubeId}`, {
           events: {
             onReady: (event: any) => {
-              console.log("YouTube player ready");
+              // YouTube player ready
               setYoutubePlayer(event.target);
               setDuration(event.target.getDuration());
               
               // Force play if active
               if (isActive) {
-                console.log("Auto-playing YouTube video because isActive=true");
+                // Auto-playing YouTube video because isActive=true
                 // Use a longer timeout for more reliability
                 setTimeout(() => {
                   try {
-                    console.log("Attempting to play video now");
+                    // Attempting to play video now
                     event.target.playVideo();
                     
                     // Double-check playback after a short delay
                     setTimeout(() => {
                       const state = event.target.getPlayerState();
-                      console.log("Player state after play attempt:", state);
+                      // Check player state after play attempt
                       
                       // If not playing (state !== 1), try again
                       if (state !== 1) {
-                        console.log("Video not playing, trying again");
+                        // Video not playing, trying again
                         event.target.playVideo();
                       }
                     }, 500);
                   } catch (e) {
-                    console.error("Error playing video:", e);
+                    // Error playing video
                   }
                 }, 300);
               }
             },
             onStateChange: (event: any) => {
-              console.log("YouTube player state changed:", event.data);
+              // YouTube player state changed
               onPlayerStateChange(event);
             },
             onError: (event: any) => {
-              console.error("YouTube player error:", event.data);
+              // YouTube player error
             }
           }
         });
       } catch (error) {
-        console.error("Error initializing YouTube player:", error);
+        // Error initializing YouTube player
       }
     } else {
-      console.warn("YouTube API not available yet");
+      // YouTube API not available yet
     }
   }
 
@@ -493,19 +492,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
               onLoad={() => {
-                console.log(`YouTube iframe loaded for ID: ${youtubeId}`);
+                // YouTube iframe loaded
                 
                 // Wait for iframe to be fully loaded before initializing player
                 setTimeout(() => {
                   // Initialize YouTube API if not already loaded
                   if (!window.YT) {
-                    console.log("Loading YouTube API");
+                    // Loading YouTube API
                     const tag = document.createElement('script');
                     tag.src = 'https://www.youtube.com/iframe_api';
                     
                     // Set up callback for when API is ready
                     window.onYouTubeIframeAPIReady = () => {
-                      console.log("YouTube API ready, initializing player");
+                      // YouTube API ready, initializing player
                       setTimeout(() => {
                         initYoutubePlayer();
                       }, 300);
@@ -514,7 +513,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     document.body.appendChild(tag);
                   } else {
                     // API already loaded, initialize player directly
-                    console.log("YouTube API already loaded, initializing player directly");
+                    // YouTube API already loaded, initializing player directly
                     initYoutubePlayer();
                   }
                 }, 300); // Add a delay to ensure iframe is fully loaded

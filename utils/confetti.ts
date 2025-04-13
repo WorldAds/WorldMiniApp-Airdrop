@@ -16,19 +16,19 @@ export const triggerConfetti = (
     startVelocity: options?.startVelocity || 30,
     spread: options?.spread || 360,
     ticks: 60,
-    zIndex: options?.zIndex || 999,  // 设置高 z-index 确保在最上层
+    zIndex: options?.zIndex || 999,  // Set high z-index to ensure it's on top
   };
 
   const randomInRange = (min: number, max: number) =>
     Math.random() * (max - min) + min;
 
-  // 如果提供了元素，使用元素位置作为起点
+  // If an element is provided, use the element's position as the starting point
   if (element) {
     const rect = element.getBoundingClientRect();
     const x = (rect.left + rect.width / 2) / window.innerWidth;
     const y = (rect.top + rect.height / 2) / window.innerHeight;
     
-    // 从元素中心爆发
+    // Burst from the center of the element
     confetti({
       ...defaults,
       particleCount: options?.particleCount || 100,
@@ -38,10 +38,10 @@ export const triggerConfetti = (
     return;
   }
 
-  // 如果没有提供元素，在屏幕中间爆开
+  // If no element is provided, burst in the middle of the screen
   confetti({
     ...defaults,
     particleCount: options?.particleCount || 100,
-    origin: { x: 0.5, y: 0.4 }, // 屏幕中间位置（y轴稍微上移一点，视觉上更居中）
+    origin: { x: 0.5, y: 0.4 }, // Middle of the screen (y-axis slightly moved up for better visual centering)
   });
 }

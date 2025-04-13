@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import UserAvatar from "./UserAvatar";
-import WorldIDComponent from "./WorldIDComponent";
 import DataTab from "./DataTab";
 import BalanceTab from "./BalanceTab";
 import ProfileTab from "./ProfileTab";
 import Footer from "./Footer";
 import { MiniKit } from "@worldcoin/minikit-js";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSession } from "next-auth/react";
+import UserAvatar from "./UserAvatar";
 
 export default function DataCenterScreen() {
   const router = useRouter();
@@ -17,9 +18,11 @@ export default function DataCenterScreen() {
   const initialTab = searchParams.get("tab") || "data";
   const [activeTab, setActiveTab] = useState(initialTab.toLowerCase());
   const [walletAddress, setWalletAddress] = useState("");
+  const { user, isAuthenticated, login } = useAuth();
+  const { data: session } = useSession();
 
   useEffect(() => {
-    // 3) If MiniKit is installed, retrieve the wallet address
+    // If MiniKit is installed, retrieve the wallet address
     if (MiniKit.isInstalled()) {
       const address = MiniKit.walletAddress; // This is set after a successful walletAuth
       if (address) {
@@ -28,12 +31,27 @@ export default function DataCenterScreen() {
     }
   }, []);
 
+  // Try to login if we have session and wallet address but no user
+  useEffect(() => {
+    const attemptLogin = async () => {
+      if (!isAuthenticated && session?.user?.id && walletAddress) {
+        try {
+          await login(session.user.id, walletAddress);
+        } catch (error) {
+          console.error("Auto-login error:", error);
+        }
+      }
+    };
+
+    attemptLogin();
+  }, [isAuthenticated, walletAddress, login]);
+
   return (
     <div className="min-h-screen bg-[#1E1B2E] text-white pb-12">
       {/* Header */}
       <header className="p-4 flex items-center">
         <button
-          onClick={() => router.replace('/ads')}
+          onClick={() => router.replace("/ads")}
           className="text-white hover:opacity-80 transition-opacity"
         >
           <ArrowLeft className="w-6 h-6" />
@@ -41,11 +59,12 @@ export default function DataCenterScreen() {
         <h2 className="flex-1 text-center text-lg font-medium">Data Center</h2>
       </header>
 
-      {/* Main Content */}
-      <main className="flex flex-col items-center px-4 pt-8">
+      <div className="flex flex-col items-center pt-8">
         <UserAvatar />
-        <WorldIDComponent />
+      </div>
 
+      {/* Main Content */}
+      <main className="flex flex-col items-center px-4">
         {/* Tabs */}
         <div className="flex gap-4 mt-8 mb-4 relative">
           {["Data", "Balance", "Profile"].map((tab) => (
@@ -71,7 +90,7 @@ export default function DataCenterScreen() {
         <div className="w-full">
           {activeTab === "data" && <DataTab />}
           {activeTab === "balance" && <BalanceTab />}
-          {activeTab === "profile" && <ProfileTab />}
+          {activeTab === "profile" && <ProfileTab user={user} />}
         </div>
       </main>
 

@@ -3,6 +3,8 @@
 import { ArrowLeft, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +17,12 @@ import { MiniKit } from "@worldcoin/minikit-js";
 export default function WalletAuthScreen() {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { data: session } = useSession();
+  const { login } = useAuth();
+
+  // const mockWalletAddress = "0x1234567890abcdef1234567890abcdef12345678";
+  // const mockWorldId = "mock-world-id";
 
   // 2) Add the async walletAuth logic to this handler
   const handleVerifyWallet = async () => {
@@ -24,6 +32,8 @@ export default function WalletAuthScreen() {
         alert("MiniKit not installed (are you in the World App?)");
         return;
       }
+
+      setIsLoading(true);
 
       // Fetch a nonce from /api/nonce
       const res = await fetch("/api/nonce", { method: "GET" });
@@ -42,6 +52,7 @@ export default function WalletAuthScreen() {
       // If the user canceled or there's an error from MiniKit
       if (finalPayload.status === "error") {
         console.log("User canceled or error in MiniKit:", finalPayload);
+        setIsLoading(false);
         return;
       }
 
@@ -62,16 +73,46 @@ export default function WalletAuthScreen() {
 
       const verifyData = await verifyRes.json();
       if (verifyData.status === "success") {
-        // Wallet is verified → show the success modal
-        setIsModalOpen(true);
+        // Get the wallet address from MiniKit
+        const walletAddress = MiniKit.walletAddress;
+        
+        if (!walletAddress) {
+          alert("Failed to get wallet address");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Login with our backend
+        const userData = await login(session?.user?.id || "", walletAddress);
+        
+        if (userData) {
+          // Login successful
+          // Show the success modal
+          setIsModalOpen(true);
+        } else {
+          // Login failed
+          alert("Login failed. Please try again.");
+        }
       } else {
         console.warn("Signature invalid or other error:", verifyData);
       }
+      
+      setIsLoading(false);
     } catch (err: any) {
       console.error("Wallet Auth error:", err);
       alert(err.message);
+      setIsLoading(false);
     }
   };
+
+  // const handleVerifyWallet = async () =>{
+  //   setIsLoading(true);
+  //   const userData = await login(mockWorldId, mockWalletAddress);
+  //   if (userData) {
+  //             setIsModalOpen(true);
+  //             setIsLoading(false);
+  //  } 
+  // }
 
   const handleContinue = () => {
     setIsModalOpen(false);
@@ -116,7 +157,7 @@ export default function WalletAuthScreen() {
 
           {/* Verify Wallet Text */}
           <span className="font-inter font-semibold text-[20px] leading-[24px] tracking-[0.03em] bg-gradient-to-r from-[#AC54F1] to-[#EB489A] bg-clip-text text-transparent">
-            Verify Wallet
+            {isLoading ? "Loading..." : "Verify Wallet"}
           </span>
         </div>
       </main>

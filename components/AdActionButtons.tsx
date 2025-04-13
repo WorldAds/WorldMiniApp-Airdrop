@@ -1,33 +1,93 @@
 import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { triggerConfetti } from "@/utils/confetti";
+import CommentDrawer from "./comments/CommentDrawer";
+import { useAuth } from "@/contexts/AuthContext";
+import { postFavorite, getUserFavorites } from "@/app/api/service";
+import profileIcon from "../public/icons/profile.png";
+import { useRouter } from "next/navigation";
 
 interface Props {
   adId: string;
   completed?: boolean;
+  onVideoStateChange?: (shouldPause: boolean) => void;
 }
-import profileIcon from "../public/icons/profile.png";
-import { useRouter } from "next/navigation";
 
-const AdActionButtons: React.FC<Props> = ({ adId, completed = false }) => {
+const AdActionButtons: React.FC<Props> = ({ 
+  adId, 
+  completed = false,
+  onVideoStateChange = () => {} // Default no-op function
+}) => {
+  const { user } = useAuth();
   const [isFavourited, setIsFavourited] = useState(false);
   const [activeButton, setActiveButton] = useState<string | null>(null);
+  const [isCommentDrawerOpen, setIsCommentDrawerOpen] = useState(false);
   const favouriteButtonRef = useRef<SVGSVGElement>(null);
   const router = useRouter();
 
-  const handleFavouriteClick = () => {
-    if (!isFavourited) {
+  // Check if the ad is already favorited when component mounts
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (!user) return;
 
-      triggerConfetti(undefined, {
-        particleCount: 100,
-        spread: 360,
-        startVelocity: 25,
-        duration: 1000,
-        zIndex: 9999  
-      });
+      try {
+        const favorites = await getUserFavorites(user.worldId);
+        // Check if this ad is in the user's favorites
+        const isAdFavorited = favorites.some((favorite: any) => favorite.adId === adId);
+        setIsFavourited(isAdFavorited);
+      } catch (error) {
+        console.error('Error checking favorite status:', error);
+      }
+    };
+
+    checkFavoriteStatus();
+  }, [adId, user]);
+
+  const handleFavouriteClick = async () => {
+    if (!user) {
+      // If user is not logged in, redirect to login page
+      router.push("/wallet-auth");
+      return;
     }
-    
-    setIsFavourited(!isFavourited);
+
+    try {
+      if (!isFavourited) {
+        // Add to favorites
+        await postFavorite({
+          adId,
+          worldId: user.worldId,
+          createdAt: new Date().toISOString(),
+          note: "Favorited ad"
+        });
+
+        // Show confetti animation
+        triggerConfetti(undefined, {
+          particleCount: 100,
+          spread: 360,
+          startVelocity: 25,
+          duration: 1000,
+          zIndex: 9999  
+        });
+        
+        // Re-fetch favorites to update the state
+        const favorites = await getUserFavorites(user.worldId);
+        const isAdFavorited = favorites.some((favorite: any) => favorite.adId === adId);
+        setIsFavourited(isAdFavorited);
+      } else {
+        // In a real implementation, you would have an API endpoint to remove favorites
+        // For now, we'll just update the UI state
+        setIsFavourited(false);
+        // Note: Backend API doesn't seem to have a delete favorite endpoint yet
+        // This would be implemented as:
+        // await deleteFavorite(adId, user.worldId);
+        // Then re-fetch favorites:
+        // const favorites = await getUserFavorites(user.worldId);
+        // const isAdFavorited = favorites.some((favorite: any) => favorite.adId === adId);
+        // setIsFavourited(isAdFavorited);
+      }
+    } catch (error) {
+      console.error('Error updating favorite status:', error);
+    }
   };
 
   return (
@@ -67,11 +127,12 @@ const AdActionButtons: React.FC<Props> = ({ adId, completed = false }) => {
         version="1.1"
         xmlns="http://www.w3.org/2000/svg"
         p-id="8586"
-         width="30"
+        width="30"
         height="30"
-        className={`cursor-pointer transition-opacity duration-200 ${activeButton === 'comment' ? 'opacity-100' : 'opacity-30'}`}
+        className={`cursor-pointer transition-opacity duration-200 ${activeButton === 'comment' || isCommentDrawerOpen ? 'opacity-100' : 'opacity-30'}`}
         onMouseEnter={() => setActiveButton('comment')}
         onMouseLeave={() => setActiveButton(null)}
+        onClick={() => setIsCommentDrawerOpen(true)}
       >
         <path
           d="M512 0C226.742857 0 0 197.485714 0 446.171429c0 138.971429 73.142857 270.628571 190.171429 351.085714L190.171429 1024l226.742857-138.971429c29.257143 7.314286 65.828571 7.314286 95.085714 7.314286 285.257143 0 512-197.485714 512-446.171429C1024 197.485714 797.257143 0 512 0zM256 512C219.428571 512 190.171429 482.742857 190.171429 446.171429S219.428571 380.342857 256 380.342857c36.571429 0 65.828571 29.257143 65.828571 65.828571S292.571429 512 256 512zM512 512C475.428571 512 446.171429 482.742857 446.171429 446.171429S475.428571 380.342857 512 380.342857c36.571429 0 65.828571 29.257143 65.828571 65.828571S548.571429 512 512 512zM768 512C731.428571 512 702.171429 482.742857 702.171429 446.171429s29.257143-65.828571 65.828571-65.828571c36.571429 0 65.828571 29.257143 65.828571 65.828571S804.571429 512 768 512z"
@@ -102,16 +163,45 @@ const AdActionButtons: React.FC<Props> = ({ adId, completed = false }) => {
       <div
         className="w-[30px] h-[30px] rounded-full bg-white overflow-hidden"
         onClick={() => {
-          router.push("/data-center?tab=profile");
+          // Check if user is logged in before navigating to profile
+          if (user) {
+            router.push("/data-center?tab=profile");
+          } else {
+            // If not logged in, navigate to wallet auth page for manual login
+            router.push("/wallet-auth");
+          }
         }}
       >
-        <Image
-          src={profileIcon}
-          alt="Advertiser Avatar"
-          width={30}
-          height={30}
-        />
+        {user?.avatarUrl ? (
+          <Image
+            src={`${process.env.NEXT_PUBLIC_API_BASE_URL}${user.avatarUrl}`}
+            alt="User Avatar"
+            width={30}
+            height={30}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <Image
+            src={profileIcon}
+            alt="User Avatar"
+            width={30}
+            height={30}
+          />
+        )}
       </div>
+      {/* Comment Drawer */}
+      <CommentDrawer
+        adId={adId}
+        isOpen={isCommentDrawerOpen}
+        onClose={() => {
+          setIsCommentDrawerOpen(false);
+          // Explicitly call onVideoStateChange with false to ensure video resumes
+          setTimeout(() => {
+            onVideoStateChange(false);
+          }, 300);
+        }}
+        onVideoStateChange={onVideoStateChange}
+      />
     </div>
   );
 };
